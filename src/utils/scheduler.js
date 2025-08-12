@@ -28,6 +28,11 @@ class ReminderScheduler {
     async checkReminders() {
         try {
             const activeReminders = await database.getActiveReminders();
+            console.log(`🔍 Checking reminders... Found ${activeReminders.length} due reminders`);
+            
+            if (activeReminders.length > 0) {
+                console.log('Due reminders:', activeReminders.map(r => `ID:${r.id} Time:${r.scheduled_time}`));
+            }
             
             for (const reminder of activeReminders) {
                 await this.processReminder(reminder);
@@ -40,6 +45,7 @@ class ReminderScheduler {
 
     async processReminder(reminder) {
         try {
+            console.log(`📨 Processing reminder ${reminder.id}: "${reminder.message}"`);
             const channel = await this.client.channels.fetch(reminder.channel_id);
             if (!channel) {
                 console.error(`Channel ${reminder.channel_id} not found for reminder ${reminder.id}`);
@@ -67,6 +73,7 @@ class ReminderScheduler {
 
             const content = `🔔 Hey <@${targetUserId}>! You asked me to remind you about this.`;
 
+            console.log(`💬 Sending reminder to channel ${channel.name} (${channel.id})`);
             await channel.send({ 
                 content: content,
                 embeds: [embed] 
@@ -83,6 +90,9 @@ class ReminderScheduler {
                 await database.completeReminder(reminder.id);
             } else if (error.code === 50013) { 
                 console.log(`No permissions to send reminder ${reminder.id}, marking as completed`);
+                await database.completeReminder(reminder.id);
+            } else if (error.code === 50001) {
+                console.log(`Missing access to channel for reminder ${reminder.id}, marking as completed`);
                 await database.completeReminder(reminder.id);
             }
         }

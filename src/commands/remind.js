@@ -20,15 +20,19 @@ export default {
                 .setRequired(false)),
 
     async execute(interaction) {
+        console.log(`🔄 Processing /remind command...`);
+        
         const timeString = interaction.options.getString('time');
         const message = interaction.options.getString('message');
         const targetUser = interaction.options.getUser('user') || interaction.user;
         const isRemindingOther = targetUser.id !== interaction.user.id;
 
         try {
+            console.log(`⏰ Parsing time: "${timeString}"`);
             // Parse time with UTC first for quick validation
             const parsedTime = TimeParser.parseTimeString(timeString, 'UTC');
             if (!parsedTime || !parsedTime.isValid) {
+                console.log(`❌ Invalid time format detected`);
                 const embed = new EmbedBuilder()
                     .setColor('#ff4444')
                     .setTitle('❌ Invalid Time Format')
@@ -38,8 +42,12 @@ export default {
                     )
                     .setFooter({ text: 'Tip: Use /timezone to set your timezone for better parsing' });
 
+                console.log(`📤 Sending error response...`);
                 return await interaction.reply({ embeds: [embed], ephemeral: true });
             }
+
+            console.log(`✅ Time parsed successfully: ${parsedTime.date}`);
+            console.log(`💾 Creating reminder in database...`);
 
             // Create reminder immediately with default timezone
             const reminderId = await database.createReminder(
@@ -51,6 +59,8 @@ export default {
                 parsedTime.date.toISOString(),
                 'UTC'
             );
+
+            console.log(`✅ Reminder created with ID: ${reminderId}`);
 
             // Create users if they don't exist (async, don't wait)
             database.createUser(interaction.user.id).catch(() => {}); // Ignore if exists
@@ -79,6 +89,7 @@ export default {
             }
 
             // Reply immediately - no defer needed!
+            console.log(`📤 Sending success response...`);
             await interaction.reply({ embeds: [embed] });
 
         } catch (error) {

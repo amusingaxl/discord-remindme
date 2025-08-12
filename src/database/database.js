@@ -122,8 +122,10 @@ class Database {
 
     async getActiveReminders() {
         return new Promise((resolve, reject) => {
+            const now = new Date().toISOString();
             this.db.all(
-                'SELECT * FROM reminders WHERE is_completed = FALSE AND scheduled_time <= datetime("now")',
+                'SELECT * FROM reminders WHERE is_completed = FALSE AND scheduled_time <= ?',
+                [now],
                 (err, rows) => {
                     if (err) {
                         reject(err);

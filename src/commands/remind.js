@@ -25,7 +25,13 @@ export default {
         const targetUser = interaction.options.getUser('user') || interaction.user;
         const isRemindingOther = targetUser.id !== interaction.user.id;
 
-        await interaction.deferReply();
+        // Defer reply immediately to avoid timeout
+        try {
+            await interaction.deferReply();
+        } catch (error) {
+            console.error('Failed to defer reply:', error);
+            return;
+        }
 
         try {
             let userRecord = await database.getUser(interaction.user.id);
@@ -60,7 +66,7 @@ export default {
                 interaction.user.id,
                 isRemindingOther ? targetUser.id : null,
                 interaction.guild?.id || null,
-                interaction.channel.id,
+                interaction.channelId,
                 message,
                 parsedTime.date.toISOString(),
                 parsedTime.originalTimezone

@@ -29,7 +29,12 @@ export default {
     async execute(interaction) {
         const newTimezone = interaction.options.getString('timezone');
         
-        await interaction.deferReply({ ephemeral: true });
+        try {
+            await interaction.deferReply({ ephemeral: true });
+        } catch (error) {
+            console.error('Failed to defer reply:', error);
+            return;
+        }
 
         try {
             let userRecord = await database.getUser(interaction.user.id);

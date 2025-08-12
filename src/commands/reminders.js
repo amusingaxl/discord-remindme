@@ -24,7 +24,12 @@ export default {
         const action = interaction.options.getString('action') || 'list';
         const reminderId = interaction.options.getInteger('id');
         
-        await interaction.deferReply({ ephemeral: true });
+        try {
+            await interaction.deferReply({ ephemeral: true });
+        } catch (error) {
+            console.error('Failed to defer reply:', error);
+            return;
+        }
 
         try {
             let userRecord = await database.getUser(interaction.user.id);

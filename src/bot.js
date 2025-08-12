@@ -64,12 +64,21 @@ client.on('interactionCreate', async interaction => {
             await command.execute(interaction);
         } catch (error) {
             console.error('Error executing command:', error);
-            const errorMessage = { content: 'There was an error while executing this command!', ephemeral: true };
             
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(errorMessage);
-            } else {
-                await interaction.reply(errorMessage);
+            // Try to respond with error message if possible
+            try {
+                const errorMessage = { content: 'There was an error while executing this command! Please try again.', ephemeral: true };
+                
+                if (interaction.deferred) {
+                    await interaction.editReply(errorMessage);
+                } else if (interaction.replied) {
+                    await interaction.followUp(errorMessage);
+                } else {
+                    await interaction.reply(errorMessage);
+                }
+            } catch (responseError) {
+                // If we can't respond, just log it (interaction might have timed out)
+                console.error('Failed to send error response:', responseError.message);
             }
         }
     } else if (interaction.isAutocomplete()) {

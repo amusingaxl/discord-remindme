@@ -30,13 +30,23 @@ export default {
         const newTimezone = interaction.options.getString('timezone');
         
         try {
-            await interaction.deferReply({ ephemeral: true });
-        } catch (error) {
-            console.error('Failed to defer reply:', error);
-            return;
-        }
+            // For timezone validation, we can respond quickly
+            if (newTimezone && !TimeParser.validateTimezone(newTimezone)) {
+                const embed = new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('❌ Invalid Timezone')
+                    .setDescription(`"${newTimezone}" is not a valid timezone.`)
+                    .addFields({
+                        name: 'Common timezones:',
+                        value: TimeParser.getSupportedTimezones().slice(0, 8).join('\n')
+                    })
+                    .setFooter({ text: 'Use timezone autocomplete or visit: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones' });
 
-        try {
+                return await interaction.reply({ embeds: [embed], ephemeral: true });
+            }
+
+            // Now defer for database operations
+            await interaction.deferReply({ ephemeral: true });
             let userRecord = await database.getUser(interaction.user.id);
             if (!userRecord) {
                 await database.createUser(interaction.user.id);
@@ -55,20 +65,6 @@ export default {
                     )
                     .setDescription('Use `/timezone <timezone>` to change your timezone.')
                     .setFooter({ text: 'Common timezones: UTC, America/New_York, Europe/London, Asia/Tokyo' });
-
-                return await interaction.editReply({ embeds: [embed] });
-            }
-
-            if (!TimeParser.validateTimezone(newTimezone)) {
-                const embed = new EmbedBuilder()
-                    .setColor('#ff4444')
-                    .setTitle('❌ Invalid Timezone')
-                    .setDescription(`"${newTimezone}" is not a valid timezone.`)
-                    .addFields({
-                        name: 'Common timezones:',
-                        value: TimeParser.getSupportedTimezones().slice(0, 8).join('\n')
-                    })
-                    .setFooter({ text: 'Use timezone autocomplete or visit: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones' });
 
                 return await interaction.editReply({ embeds: [embed] });
             }

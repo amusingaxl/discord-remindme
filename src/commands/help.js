@@ -7,6 +7,7 @@ export default {
         .setDescription('Get help with using the reminder bot'),
 
     async execute(interaction) {
+        // Help command is simple, respond immediately
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('🤖 Reminder Bot Help')

@@ -25,15 +25,24 @@ export default {
         const targetUser = interaction.options.getUser('user') || interaction.user;
         const isRemindingOther = targetUser.id !== interaction.user.id;
 
-        // Defer reply immediately to avoid timeout
         try {
-            await interaction.deferReply();
-        } catch (error) {
-            console.error('Failed to defer reply:', error);
-            return;
-        }
+            // First, validate the time format quickly to give immediate feedback
+            const quickTimeCheck = TimeParser.parseTimeString(timeString, 'UTC');
+            if (!quickTimeCheck || !quickTimeCheck.isValid) {
+                const embed = new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('❌ Invalid Time Format')
+                    .setDescription('I couldn\'t understand that time format. Here are some examples:')
+                    .addFields(
+                        { name: 'Valid formats:', value: TimeParser.getTimeExamples().join('\n') }
+                    )
+                    .setFooter({ text: 'Tip: Use /timezone to set your timezone for better parsing' });
 
-        try {
+                return await interaction.reply({ embeds: [embed], ephemeral: true });
+            }
+
+            // Now defer for the longer database operations
+            await interaction.deferReply();
             let userRecord = await database.getUser(interaction.user.id);
             if (!userRecord) {
                 await database.createUser(interaction.user.id);
@@ -47,20 +56,8 @@ export default {
                 }
             }
 
+            // Parse time with user's timezone (we already validated it's parseable)
             const parsedTime = TimeParser.parseTimeString(timeString, userRecord.timezone);
-            
-            if (!parsedTime || !parsedTime.isValid) {
-                const embed = new EmbedBuilder()
-                    .setColor('#ff4444')
-                    .setTitle('❌ Invalid Time Format')
-                    .setDescription('I couldn\'t understand that time format. Here are some examples:')
-                    .addFields(
-                        { name: 'Valid formats:', value: TimeParser.getTimeExamples().join('\n') }
-                    )
-                    .setFooter({ text: 'Tip: Use /timezone to set your timezone for better parsing' });
-
-                return await interaction.editReply({ embeds: [embed] });
-            }
 
             const reminderId = await database.createReminder(
                 interaction.user.id,

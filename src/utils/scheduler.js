@@ -71,6 +71,15 @@ class ReminderScheduler {
                 });
             }
 
+            // Add link to original message if available
+            if (reminder.referenced_message_url) {
+                embed.addFields({
+                    name: '🔗 Original Message',
+                    value: `[Jump to message](${reminder.referenced_message_url})`,
+                    inline: true
+                });
+            }
+
             const content = `🔔 Hey <@${targetUserId}>! You asked me to remind you about this.`;
 
             console.log(`💬 Sending reminder to channel ${channel.name} (${channel.id})`);

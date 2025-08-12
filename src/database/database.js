@@ -42,6 +42,8 @@ class Database {
                     timezone TEXT DEFAULT 'UTC',
                     is_completed BOOLEAN DEFAULT FALSE,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    referenced_message_id TEXT,
+                    referenced_message_url TEXT,
                     FOREIGN KEY (user_id) REFERENCES users (discord_id)
                 )
             `);
@@ -101,14 +103,14 @@ class Database {
         });
     }
 
-    async createReminder(userId, targetUserId, guildId, channelId, message, scheduledTime, timezone = 'UTC') {
+    async createReminder(userId, targetUserId, guildId, channelId, message, scheduledTime, timezone = 'UTC', referencedMessageId = null, referencedMessageUrl = null) {
         return new Promise((resolve, reject) => {
             const stmt = this.db.prepare(`
-                INSERT INTO reminders (user_id, target_user_id, guild_id, channel_id, message, scheduled_time, timezone)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO reminders (user_id, target_user_id, guild_id, channel_id, message, scheduled_time, timezone, referenced_message_id, referenced_message_url)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `);
             
-            stmt.run([userId, targetUserId, guildId, channelId, message, scheduledTime, timezone], function(err) {
+            stmt.run([userId, targetUserId, guildId, channelId, message, scheduledTime, timezone, referencedMessageId, referencedMessageUrl], function(err) {
                 if (err) {
                     reject(err);
                 } else {

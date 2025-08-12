@@ -25,16 +25,10 @@ export default {
         const reminderId = interaction.options.getInteger('id');
         
         try {
-            await interaction.deferReply({ ephemeral: true });
-        } catch (error) {
-            console.error('Failed to defer reply:', error);
-            return;
-        }
-
-        try {
+            // Get user record (create if doesn't exist)
             let userRecord = await database.getUser(interaction.user.id);
             if (!userRecord) {
-                await database.createUser(interaction.user.id);
+                database.createUser(interaction.user.id).catch(() => {}); // Async, don't wait
                 userRecord = { discord_id: interaction.user.id, timezone: 'UTC' };
             }
 
@@ -45,7 +39,7 @@ export default {
                         .setTitle('❌ Missing Reminder ID')
                         .setDescription('Please provide a reminder ID to delete.\nUse `/reminders list` to see your reminder IDs.');
                     
-                    return await interaction.editReply({ embeds: [embed] });
+                    return await interaction.reply({ embeds: [embed], ephemeral: true });
                 }
 
                 const deleted = await database.deleteReminder(reminderId, interaction.user.id);
@@ -56,7 +50,7 @@ export default {
                         .setTitle('❌ Reminder Not Found')
                         .setDescription(`Reminder with ID ${reminderId} was not found or you don't have permission to delete it.`);
                     
-                    return await interaction.editReply({ embeds: [embed] });
+                    return await interaction.reply({ embeds: [embed], ephemeral: true });
                 }
 
                 const embed = new EmbedBuilder()
@@ -64,7 +58,7 @@ export default {
                     .setTitle('✅ Reminder Deleted')
                     .setDescription(`Reminder ${reminderId} has been deleted.`);
                 
-                return await interaction.editReply({ embeds: [embed] });
+                return await interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
             const includeCompleted = action === 'completed';
@@ -78,7 +72,7 @@ export default {
                         ? 'You have no completed reminders.'
                         : 'You have no active reminders.\n\nUse `/remind` to create a new reminder!');
                 
-                return await interaction.editReply({ embeds: [embed] });
+                return await interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
             const embed = new EmbedBuilder()
@@ -130,7 +124,7 @@ export default {
                 inline: false
             });
 
-            await interaction.editReply({ embeds: [embed] });
+            await interaction.reply({ embeds: [embed], ephemeral: true });
 
         } catch (error) {
             console.error('Error managing reminders:', error);
@@ -140,7 +134,15 @@ export default {
                 .setTitle('❌ Error')
                 .setDescription('Sorry, there was an error managing your reminders. Please try again.');
 
-            await interaction.editReply({ embeds: [embed] });
+            try {
+                if (interaction.replied) {
+                    await interaction.followUp({ embeds: [embed], ephemeral: true });
+                } else {
+                    await interaction.reply({ embeds: [embed], ephemeral: true });
+                }
+            } catch (replyError) {
+                console.error('Failed to send error response:', replyError);
+            }
         }
     }
 };

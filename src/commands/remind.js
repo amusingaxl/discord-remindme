@@ -26,9 +26,9 @@ export default {
         const isRemindingOther = targetUser.id !== interaction.user.id;
 
         try {
-            // First, validate the time format quickly to give immediate feedback
-            const quickTimeCheck = TimeParser.parseTimeString(timeString, 'UTC');
-            if (!quickTimeCheck || !quickTimeCheck.isValid) {
+            // Parse time with UTC first for quick validation
+            const parsedTime = TimeParser.parseTimeString(timeString, 'UTC');
+            if (!parsedTime || !parsedTime.isValid) {
                 const embed = new EmbedBuilder()
                     .setColor('#ff4444')
                     .setTitle('❌ Invalid Time Format')
@@ -41,24 +41,7 @@ export default {
                 return await interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            // Now defer for the longer database operations
-            await interaction.deferReply();
-            let userRecord = await database.getUser(interaction.user.id);
-            if (!userRecord) {
-                await database.createUser(interaction.user.id);
-                userRecord = { discord_id: interaction.user.id, timezone: 'UTC' };
-            }
-
-            if (isRemindingOther) {
-                let targetUserRecord = await database.getUser(targetUser.id);
-                if (!targetUserRecord) {
-                    await database.createUser(targetUser.id);
-                }
-            }
-
-            // Parse time with user's timezone (we already validated it's parseable)
-            const parsedTime = TimeParser.parseTimeString(timeString, userRecord.timezone);
-
+            // Create reminder immediately with default timezone
             const reminderId = await database.createReminder(
                 interaction.user.id,
                 isRemindingOther ? targetUser.id : null,
@@ -66,10 +49,16 @@ export default {
                 interaction.channelId,
                 message,
                 parsedTime.date.toISOString(),
-                parsedTime.originalTimezone
+                'UTC'
             );
 
-            const timeFormatted = TimeParser.formatReminderTime(parsedTime.date, userRecord.timezone);
+            // Create users if they don't exist (async, don't wait)
+            database.createUser(interaction.user.id).catch(() => {}); // Ignore if exists
+            if (isRemindingOther) {
+                database.createUser(targetUser.id).catch(() => {}); // Ignore if exists
+            }
+
+            const timeFormatted = TimeParser.formatReminderTime(parsedTime.date, 'UTC');
 
             const embed = new EmbedBuilder()
                 .setColor('#00ff88')
@@ -89,7 +78,8 @@ export default {
                 });
             }
 
-            await interaction.editReply({ embeds: [embed] });
+            // Reply immediately - no defer needed!
+            await interaction.reply({ embeds: [embed] });
 
         } catch (error) {
             console.error('Error creating reminder:', error);
@@ -99,7 +89,15 @@ export default {
                 .setTitle('❌ Error')
                 .setDescription('Sorry, there was an error creating your reminder. Please try again.');
 
-            await interaction.editReply({ embeds: [embed] });
+            try {
+                if (interaction.deferred || interaction.replied) {
+                    await interaction.editReply({ embeds: [embed] });
+                } else {
+                    await interaction.reply({ embeds: [embed], ephemeral: true });
+                }
+            } catch (replyError) {
+                console.error('Failed to send error response:', replyError);
+            }
         }
     }
 };

@@ -45,12 +45,11 @@ export default {
                 return await interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            // Now defer for database operations
-            await interaction.deferReply({ ephemeral: true });
+            // Get or create user record quickly
             let userRecord = await database.getUser(interaction.user.id);
             if (!userRecord) {
-                await database.createUser(interaction.user.id);
-                userRecord = { discord_id: interaction.user.id, timezone: 'UTC' };
+                await database.createUser(interaction.user.id, newTimezone || 'UTC');
+                userRecord = { discord_id: interaction.user.id, timezone: newTimezone || 'UTC' };
             }
 
             if (!newTimezone) {
@@ -66,7 +65,7 @@ export default {
                     .setDescription('Use `/timezone <timezone>` to change your timezone.')
                     .setFooter({ text: 'Common timezones: UTC, America/New_York, Europe/London, Asia/Tokyo' });
 
-                return await interaction.editReply({ embeds: [embed] });
+                return await interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
             await database.updateUserTimezone(interaction.user.id, newTimezone);
@@ -82,7 +81,7 @@ export default {
                 )
                 .setDescription('Your timezone has been updated! All future reminders will use this timezone for parsing times.');
 
-            await interaction.editReply({ embeds: [embed] });
+            await interaction.reply({ embeds: [embed], ephemeral: true });
 
         } catch (error) {
             console.error('Error updating timezone:', error);
@@ -92,7 +91,7 @@ export default {
                 .setTitle('❌ Error')
                 .setDescription('Sorry, there was an error updating your timezone. Please try again.');
 
-            await interaction.editReply({ embeds: [embed] });
+            await interaction.reply({ embeds: [embed], ephemeral: true });
         }
     }
 };

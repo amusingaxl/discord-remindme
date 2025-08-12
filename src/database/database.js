@@ -47,6 +47,23 @@ class Database {
                     FOREIGN KEY (user_id) REFERENCES users (discord_id)
                 )
             `);
+
+            // Add missing columns to existing reminders table (migration)
+            this.db.run(`
+                ALTER TABLE reminders ADD COLUMN referenced_message_id TEXT
+            `, (err) => {
+                if (err && !err.message.includes('duplicate column name')) {
+                    console.error('Error adding referenced_message_id column:', err.message);
+                }
+            });
+
+            this.db.run(`
+                ALTER TABLE reminders ADD COLUMN referenced_message_url TEXT
+            `, (err) => {
+                if (err && !err.message.includes('duplicate column name')) {
+                    console.error('Error adding referenced_message_url column:', err.message);
+                }
+            });
         });
     }
 

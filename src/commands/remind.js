@@ -57,7 +57,9 @@ export default {
                 interaction.channelId,
                 message,
                 parsedTime.date.toISOString(),
-                'UTC'
+                'UTC',
+                null, // no referenced message
+                null  // no referenced message URL
             );
 
             console.log(`✅ Reminder created with ID: ${reminderId}`);

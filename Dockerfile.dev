@@ -16,9 +16,11 @@ RUN npm ci
 RUN npm install -g nodemon
 
 # Create data directory and set ownership to node user
-RUN mkdir -p /app/data && chown -R node:node /app/data
+RUN mkdir -p /app/data && \
+    chown -R node:node /app && \
+    chmod 755 /app/data
 
-# Use the existing node user from base image
+# Switch to node user
 USER node
 
 # Default command

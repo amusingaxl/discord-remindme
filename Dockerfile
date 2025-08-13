@@ -17,15 +17,18 @@ RUN npm ci --only=production
 COPY src/ ./src/
 COPY .env.example ./.env.example
 
-# Create volume mount point for database
-RUN mkdir -p /app/data
+# Create non-root user for security (using standard node user from base image)
+# The node user already exists with UID 1000 in node:lts-alpine
+# Just create the data directory with proper ownership
+RUN mkdir -p /app/data && \
+    chown -R node:node /app && \
+    chmod 755 /app/data
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
-    chown -R nodejs:nodejs /app
+# IMPORTANT: Declare VOLUME after setting permissions
+# This ensures the volume inherits the permissions we just set
+VOLUME ["/app/data"]
 
-USER nodejs
+USER node
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

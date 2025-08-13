@@ -22,17 +22,20 @@ A feature-rich Discord bot for creating and managing reminders with timezone sup
 ### Setup
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/yourusername/remindme-discord.git
 cd remindme-discord
 ```
 
 2. Create `.env` file from example:
+
 ```bash
 cp .env.example .env
 ```
 
 3. Edit `.env` and add your Discord credentials:
+
 ```env
 DISCORD_TOKEN=your_bot_token_here
 DISCORD_APPLICATION_ID=your_application_id_here
@@ -43,16 +46,19 @@ DISCORD_APPLICATION_ID=your_application_id_here
 #### Production Mode
 
 Start the bot:
+
 ```bash
 docker-compose up -d
 ```
 
 View logs:
+
 ```bash
 docker-compose logs -f bot
 ```
 
 Stop the bot:
+
 ```bash
 docker-compose down
 ```
@@ -60,6 +66,7 @@ docker-compose down
 #### Development Mode
 
 Start development environment with hot reload:
+
 ```bash
 docker-compose -f docker-compose.dev.yml up -d
 ```
@@ -67,6 +74,7 @@ docker-compose -f docker-compose.dev.yml up -d
 Access SQLite web interface at: http://localhost:8081
 
 Stop development environment:
+
 ```bash
 docker-compose -f docker-compose.dev.yml down
 ```
@@ -74,16 +82,19 @@ docker-compose -f docker-compose.dev.yml down
 ### Docker Commands
 
 Deploy slash commands to Discord:
+
 ```bash
 docker-compose exec bot node src/deploy-commands.js
 ```
 
 Enter bot container shell:
+
 ```bash
 docker-compose exec bot sh
 ```
 
 Backup database:
+
 ```bash
 docker cp discord-reminder-bot:/app/data/reminders.sqlite ./backups/reminders_$(date +%Y%m%d_%H%M%S).sqlite
 ```
@@ -98,6 +109,7 @@ docker cp discord-reminder-bot:/app/data/reminders.sqlite ./backups/reminders_$(
 ### Installation
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
@@ -105,11 +117,13 @@ npm install
 2. Create `.env` file and add your Discord credentials
 
 3. Deploy slash commands:
+
 ```bash
 npm run deploy
 ```
 
 4. Start the bot:
+
 ```bash
 npm start
 ```
@@ -141,20 +155,20 @@ npm start
 
 ```
 services:
-  bot:           # Main Discord bot application
+  bot:             # Main Discord bot application
   database-backup: # Automated SQLite backup service
   database-viewer: # Optional web UI for database (debug profile)
 ```
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DISCORD_TOKEN` | Discord bot token | Required |
-| `DISCORD_APPLICATION_ID` | Discord application ID | Required |
-| `DATABASE_PATH` | Path to SQLite database | `/app/data/reminders.sqlite` |
-| `DEFAULT_TIMEZONE` | Default timezone | `UTC` |
-| `NODE_ENV` | Environment mode | `production` |
+| Variable                 | Description             | Default                      |
+| ------------------------ | ----------------------- | ---------------------------- |
+| `DISCORD_TOKEN`          | Discord bot token       | Required                     |
+| `DISCORD_APPLICATION_ID` | Discord application ID  | Required                     |
+| `DATABASE_PATH`          | Path to SQLite database | `/app/data/reminders.sqlite` |
+| `DEFAULT_TIMEZONE`       | Default timezone        | `UTC`                        |
+| `NODE_ENV`               | Environment mode        | `production`                 |
 
 ## License
 

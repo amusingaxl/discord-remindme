@@ -4,7 +4,6 @@ services:
   # Discord Bot Service
   bot:
     build: .
-    container_name: discord-reminder-bot
     restart: unless-stopped
     env_file:
       - .env
@@ -15,7 +14,7 @@ services:
       - bot-data:/app/data
       - ./logs:/app/logs
     networks:
-      - reminder-network
+      - remindme-network-prod
     depends_on:
       - database-backup
     logging:
@@ -27,7 +26,6 @@ services:
   # Database Backup Service (runs periodically)
   database-backup:
     image: alpine:latest
-    container_name: database-backup
     restart: unless-stopped
     volumes:
       - bot-data:/data:ro
@@ -43,12 +41,11 @@ services:
         sleep 86400
       done'
     networks:
-      - reminder-network
+      - remindme-network-prod
 
   # Optional: Database viewer for debugging
   database-viewer:
     image: adminer
-    container_name: database-viewer
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -58,7 +55,7 @@ services:
     volumes:
       - bot-data:/data
     networks:
-      - reminder-network
+      - remindme-network-prod
     profiles:
       - debug
 
@@ -67,5 +64,5 @@ volumes:
     driver: local
 
 networks:
-  reminder-network:
+  remindme-network-prod:
     driver: bridge

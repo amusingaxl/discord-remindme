@@ -4,7 +4,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: discord-reminder-bot-dev
     restart: unless-stopped
     env_file:
       - .env
@@ -12,30 +11,26 @@ services:
       - DATABASE_PATH=/app/data/reminders.sqlite
       - NODE_ENV=development
     volumes:
-      - ./src:/app/src:ro
-      - ./package.json:/app/package.json:ro
-      - ./package-lock.json:/app/package-lock.json:ro
-      - db_data:/app/data
+      - ./src:/app/src
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./data:/app/data
     networks:
-      - reminder-network-dev
+      - remindme-network-dev
 
   # SQLite Web Interface for development
   sqlite-web:
     image: coleifer/sqlite-web:latest
-    container_name: sqlite-web
     restart: unless-stopped
     ports:
       - "8081:8080"
     volumes:
-      - db_data:/data
+      - ./data:/data
     environment:
       - SQLITE_DATABASE=/data/reminders.sqlite
     networks:
-      - reminder-network-dev
-
-volumes:
-  db_data:
+      - remindme-network-dev
 
 networks:
-  reminder-network-dev:
+  remindme-network-dev:
     driver: bridge

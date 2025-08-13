@@ -76,6 +76,20 @@ class Database {
                     }
                 },
             );
+
+            // Create indexes for better performance
+            this.db.run(
+                `CREATE INDEX IF NOT EXISTS idx_reminders_scheduled_time ON reminders(scheduled_time)`,
+            );
+            this.db.run(
+                `CREATE INDEX IF NOT EXISTS idx_reminders_user_id ON reminders(user_id)`,
+            );
+            this.db.run(
+                `CREATE INDEX IF NOT EXISTS idx_reminders_active ON reminders(is_completed, scheduled_time)`,
+            );
+            this.db.run(
+                `CREATE INDEX IF NOT EXISTS idx_users_discord_id ON users(discord_id)`,
+            );
         });
     }
 

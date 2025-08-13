@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Development Bot Service with hot reload
+  bot-dev:
+    build: 
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: discord-reminder-bot-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DATABASE_PATH=/app/data/reminders.sqlite
+      - NODE_ENV=development
+    volumes:
+      - ./src:/app/src:ro
+      - ./package.json:/app/package.json:ro
+      - ./package-lock.json:/app/package-lock.json:ro
+      - bot-data-dev:/app/data
+      - ./logs:/app/logs
+    networks:
+      - reminder-network-dev
+    command: npx nodemon src/bot.js
+
+  # SQLite Web Interface for development
+  sqlite-web:
+    image: coleifer/sqlite-web:latest
+    container_name: sqlite-web
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - bot-data-dev:/data
+    environment:
+      - SQLITE_DATABASE=/data/reminders.sqlite
+    networks:
+      - reminder-network-dev
+
+volumes:
+  bot-data-dev:
+    driver: local
+
+networks:
+  reminder-network-dev:
+    driver: bridge

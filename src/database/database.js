@@ -1,19 +1,19 @@
-import sqlite3 from 'sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import sqlite3 from "sqlite3";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 class Database {
     constructor() {
-        const dbPath = path.join(__dirname, '../../database/reminders.db');
+        const dbPath = path.join(__dirname, "../../database/reminders.db");
         const Database = sqlite3.verbose().Database;
         this.db = new Database(dbPath, (err) => {
             if (err) {
-                console.error('Error opening database:', err.message);
+                console.error("Error opening database:", err.message);
             } else {
-                console.log('Connected to SQLite database');
+                console.log("Connected to SQLite database");
                 this.init();
             }
         });
@@ -49,39 +49,51 @@ class Database {
             `);
 
             // Add missing columns to existing reminders table (migration)
-            this.db.run(`
+            this.db.run(
+                `
                 ALTER TABLE reminders ADD COLUMN referenced_message_id TEXT
-            `, (err) => {
-                if (err && !err.message.includes('duplicate column name')) {
-                    console.error('Error adding referenced_message_id column:', err.message);
-                }
-            });
+            `,
+                (err) => {
+                    if (err && !err.message.includes("duplicate column name")) {
+                        console.error(
+                            "Error adding referenced_message_id column:",
+                            err.message,
+                        );
+                    }
+                },
+            );
 
-            this.db.run(`
+            this.db.run(
+                `
                 ALTER TABLE reminders ADD COLUMN referenced_message_url TEXT
-            `, (err) => {
-                if (err && !err.message.includes('duplicate column name')) {
-                    console.error('Error adding referenced_message_url column:', err.message);
-                }
-            });
+            `,
+                (err) => {
+                    if (err && !err.message.includes("duplicate column name")) {
+                        console.error(
+                            "Error adding referenced_message_url column:",
+                            err.message,
+                        );
+                    }
+                },
+            );
         });
     }
 
-    async createUser(discordId, timezone = 'UTC') {
+    async createUser(discordId, timezone = "UTC") {
         return new Promise((resolve, reject) => {
             const stmt = this.db.prepare(`
                 INSERT OR REPLACE INTO users (discord_id, timezone)
                 VALUES (?, ?)
             `);
-            
-            stmt.run([discordId, timezone], function(err) {
+
+            stmt.run([discordId, timezone], function (err) {
                 if (err) {
                     reject(err);
                 } else {
                     resolve(this.lastID);
                 }
             });
-            
+
             stmt.finalize();
         });
     }
@@ -89,7 +101,7 @@ class Database {
     async getUser(discordId) {
         return new Promise((resolve, reject) => {
             this.db.get(
-                'SELECT * FROM users WHERE discord_id = ?',
+                "SELECT * FROM users WHERE discord_id = ?",
                 [discordId],
                 (err, row) => {
                     if (err) {
@@ -97,7 +109,7 @@ class Database {
                     } else {
                         resolve(row);
                     }
-                }
+                },
             );
         });
     }
@@ -107,34 +119,57 @@ class Database {
             const stmt = this.db.prepare(`
                 UPDATE users SET timezone = ? WHERE discord_id = ?
             `);
-            
-            stmt.run([timezone, discordId], function(err) {
+
+            stmt.run([timezone, discordId], function (err) {
                 if (err) {
                     reject(err);
                 } else {
                     resolve(this.changes);
                 }
             });
-            
+
             stmt.finalize();
         });
     }
 
-    async createReminder(userId, targetUserId, guildId, channelId, message, scheduledTime, timezone = 'UTC', referencedMessageId = null, referencedMessageUrl = null) {
+    async createReminder(
+        userId,
+        targetUserId,
+        guildId,
+        channelId,
+        message,
+        scheduledTime,
+        timezone = "UTC",
+        referencedMessageId = null,
+        referencedMessageUrl = null,
+    ) {
         return new Promise((resolve, reject) => {
             const stmt = this.db.prepare(`
                 INSERT INTO reminders (user_id, target_user_id, guild_id, channel_id, message, scheduled_time, timezone, referenced_message_id, referenced_message_url)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `);
-            
-            stmt.run([userId, targetUserId, guildId, channelId, message, scheduledTime, timezone, referencedMessageId, referencedMessageUrl], function(err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(this.lastID);
-                }
-            });
-            
+
+            stmt.run(
+                [
+                    userId,
+                    targetUserId,
+                    guildId,
+                    channelId,
+                    message,
+                    scheduledTime,
+                    timezone,
+                    referencedMessageId,
+                    referencedMessageUrl,
+                ],
+                function (err) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(this.lastID);
+                    }
+                },
+            );
+
             stmt.finalize();
         });
     }
@@ -143,7 +178,7 @@ class Database {
         return new Promise((resolve, reject) => {
             const now = new Date().toISOString();
             this.db.all(
-                'SELECT * FROM reminders WHERE is_completed = FALSE AND scheduled_time <= ?',
+                "SELECT * FROM reminders WHERE is_completed = FALSE AND scheduled_time <= ?",
                 [now],
                 (err, rows) => {
                     if (err) {
@@ -151,17 +186,17 @@ class Database {
                     } else {
                         resolve(rows || []);
                     }
-                }
+                },
             );
         });
     }
 
     async getUserReminders(discordId, includeCompleted = false) {
         return new Promise((resolve, reject) => {
-            const query = includeCompleted 
-                ? 'SELECT * FROM reminders WHERE user_id = ? OR target_user_id = ? ORDER BY scheduled_time DESC'
-                : 'SELECT * FROM reminders WHERE (user_id = ? OR target_user_id = ?) AND is_completed = FALSE ORDER BY scheduled_time ASC';
-                
+            const query = includeCompleted
+                ? "SELECT * FROM reminders WHERE user_id = ? OR target_user_id = ? ORDER BY scheduled_time DESC"
+                : "SELECT * FROM reminders WHERE (user_id = ? OR target_user_id = ?) AND is_completed = FALSE ORDER BY scheduled_time ASC";
+
             this.db.all(query, [discordId, discordId], (err, rows) => {
                 if (err) {
                     reject(err);
@@ -177,15 +212,15 @@ class Database {
             const stmt = this.db.prepare(`
                 UPDATE reminders SET is_completed = TRUE WHERE id = ?
             `);
-            
-            stmt.run([reminderId], function(err) {
+
+            stmt.run([reminderId], function (err) {
                 if (err) {
                     reject(err);
                 } else {
                     resolve(this.changes);
                 }
             });
-            
+
             stmt.finalize();
         });
     }
@@ -195,15 +230,15 @@ class Database {
             const stmt = this.db.prepare(`
                 DELETE FROM reminders WHERE id = ? AND user_id = ?
             `);
-            
-            stmt.run([reminderId, userId], function(err) {
+
+            stmt.run([reminderId, userId], function (err) {
                 if (err) {
                     reject(err);
                 } else {
                     resolve(this.changes);
                 }
             });
-            
+
             stmt.finalize();
         });
     }
@@ -212,9 +247,9 @@ class Database {
         return new Promise((resolve) => {
             this.db.close((err) => {
                 if (err) {
-                    console.error('Error closing database:', err.message);
+                    console.error("Error closing database:", err.message);
                 } else {
-                    console.log('Database connection closed');
+                    console.log("Database connection closed");
                 }
                 resolve();
             });

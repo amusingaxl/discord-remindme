@@ -1,68 +1,151 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import database from '../database/database.js';
-import TimeParser from '../utils/timeParser.js';
+import { SlashCommandBuilder } from "discord.js";
+import database from "../database/database.js";
+import TimeParser from "../utils/timeParser.js";
 
 export default {
     data: new SlashCommandBuilder()
-        .setName('remind')
-        .setDescription('Create a reminder for yourself or someone else')
-        .addStringOption(option =>
-            option.setName('time')
-                .setDescription('When to remind (e.g., "in 2 hours", "tomorrow at 3pm")')
-                .setRequired(true))
-        .addStringOption(option =>
-            option.setName('message')
-                .setDescription('What to remind about')
-                .setRequired(true))
-        .addUserOption(option =>
-            option.setName('user')
-                .setDescription('User to remind (defaults to yourself)')
-                .setRequired(false)),
+        .setName("remind")
+        .setDescription("Create a reminder for yourself or someone else")
+        .addStringOption((option) =>
+            option
+                .setName("time")
+                .setDescription(
+                    'When to remind (e.g., "in 2 hours", "tomorrow at 3pm")',
+                )
+                .setRequired(true),
+        )
+        .addStringOption((option) =>
+            option
+                .setName("message")
+                .setDescription(
+                    "What to remind about (can be used with message_link for additional context)",
+                )
+                .setRequired(false),
+        )
+        .addStringOption((option) =>
+            option
+                .setName("message_link")
+                .setDescription(
+                    "Discord message link to reference (right-click message → Copy Message Link)",
+                )
+                .setRequired(false),
+        )
+        .addUserOption((option) =>
+            option
+                .setName("user")
+                .setDescription("User to remind (defaults to yourself)")
+                .setRequired(false),
+        ),
 
     async execute(interaction) {
-        console.log(`🔄 Processing /remind command...`);
-        
-        const timeString = interaction.options.getString('time');
-        const message = interaction.options.getString('message');
-        const targetUser = interaction.options.getUser('user') || interaction.user;
-        const isRemindingOther = targetUser.id !== interaction.user.id;
+        const timeString = interaction.options.getString("time");
+        const message = interaction.options.getString("message");
+        const messageLink = interaction.options.getString("message_link");
 
-        try {
-            console.log(`⏰ Parsing time: "${timeString}"`);
-            // Parse time with UTC first for quick validation
-            const parsedTime = TimeParser.parseTimeString(timeString, 'UTC');
-            if (!parsedTime || !parsedTime.isValid) {
-                console.log(`❌ Invalid time format detected`);
-                const embed = new EmbedBuilder()
-                    .setColor('#ff4444')
-                    .setTitle('❌ Invalid Time Format')
-                    .setDescription('I couldn\'t understand that time format. Here are some examples:')
-                    .addFields(
-                        { name: 'Valid formats:', value: TimeParser.getTimeExamples().join('\n') }
-                    )
-                    .setFooter({ text: 'Tip: Use /timezone to set your timezone for better parsing' });
+        // Require either message or message_link
+        if (!message && !messageLink) {
+            return await interaction.reply({
+                content:
+                    '❌ **Please provide either a message or a message link.**\n\n💡 **Options:**\n• Provide `message` for a general reminder\n• Provide `message_link` to reference a specific message (right-click message → Copy Message Link)\n• Use `!remind "time"` when replying to a message for auto-detection',
+                ephemeral: true,
+            });
+        }
 
-                console.log(`📤 Sending error response...`);
-                return await interaction.reply({ embeds: [embed], ephemeral: true });
+        // Parse message ID from Discord URL if provided
+        let referencedMessageId = null;
+        let referencedMessageUrl = null;
+        let originalMessage = null;
+
+        if (messageLink) {
+            // Discord message URLs: https://discord.com/channels/guild_id/channel_id/message_id
+            // or for DMs: https://discord.com/channels/@me/channel_id/message_id
+            const urlMatch = messageLink.match(
+                /https:\/\/discord\.com\/channels\/(@me|\d+)\/(\d+)\/(\d+)/,
+            );
+            if (!urlMatch) {
+                return await interaction.reply({
+                    content:
+                        '❌ Invalid Discord message link. Please copy the link by right-clicking a message and selecting "Copy Message Link".',
+                    ephemeral: true,
+                });
             }
 
-            console.log(`✅ Time parsed successfully: ${parsedTime.date}`);
-            console.log(`💾 Creating reminder in database...`);
+            const [, _guildId, channelId, messageId] = urlMatch;
+            referencedMessageId = messageId;
+            referencedMessageUrl = messageLink;
 
-            // Create reminder immediately with default timezone
-            const reminderId = await database.createReminder(
+            // Try to fetch the original message
+            try {
+                const targetChannel =
+                    await interaction.client.channels.fetch(channelId);
+                if (targetChannel) {
+                    originalMessage =
+                        await targetChannel.messages.fetch(messageId);
+                }
+            } catch (_error) {
+                return await interaction.reply({
+                    content:
+                        "❌ Could not access the referenced message. Make sure the bot has permission to view that channel and the message exists.",
+                    ephemeral: true,
+                });
+            }
+        }
+        // Important: If no messageLink is provided, ensure references remain null
+
+        // Try immediate reply to dismiss popover, then quick edit
+        await interaction.reply({
+            content: "⏳ Processing...",
+            ephemeral: true,
+        });
+        const targetUser =
+            interaction.options.getUser("user") || interaction.user;
+        const isRemindingOther = targetUser.id !== interaction.user.id;
+
+        // Determine final message
+        let finalMessage;
+        if (message) {
+            // Use provided message text (works with or without message_link)
+            finalMessage = message;
+        } else if (messageLink && originalMessage) {
+            // Leave blank when only using message_link - the embed will show the original message
+            finalMessage = "";
+        } else {
+            // This shouldn't happen due to earlier validation, but just in case
+            return await interaction.editReply({
+                content:
+                    "❌ Please provide either a message or a message link.",
+            });
+        }
+
+        try {
+            // Get user's timezone preference
+            const user = await database.getUser(interaction.user.id);
+            const userTimezone = user?.timezone || "UTC";
+
+            // Parse time with user's timezone
+            const parsedTime = TimeParser.parseTimeString(
+                timeString,
+                userTimezone,
+            );
+            if (!parsedTime || !parsedTime.isValid) {
+                return await interaction.editReply({
+                    content:
+                        '❌ Invalid time format. Try: "in 1 hour", "tomorrow at 3pm", etc.',
+                });
+            }
+
+            // Create reminder with user's timezone
+            await database.createReminder(
                 interaction.user.id,
                 isRemindingOther ? targetUser.id : null,
                 interaction.guild?.id || null,
                 interaction.channelId,
-                message,
+                finalMessage,
                 parsedTime.date.toISOString(),
-                'UTC',
-                null, // no referenced message
-                null  // no referenced message URL
+                userTimezone,
+                referencedMessageId,
+                referencedMessageUrl,
             );
-
-            console.log(`✅ Reminder created with ID: ${reminderId}`);
 
             // Create users if they don't exist (async, don't wait)
             database.createUser(interaction.user.id).catch(() => {}); // Ignore if exists
@@ -70,47 +153,29 @@ export default {
                 database.createUser(targetUser.id).catch(() => {}); // Ignore if exists
             }
 
-            const timeFormatted = TimeParser.formatReminderTime(parsedTime.date, 'UTC');
+            const timeFormatted = TimeParser.formatReminderTime(
+                parsedTime.date,
+                userTimezone,
+            );
 
-            const embed = new EmbedBuilder()
-                .setColor('#00ff88')
-                .setTitle('✅ Reminder Created')
-                .setDescription(`I'll remind ${isRemindingOther ? `<@${targetUser.id}>` : 'you'} about: **${message}**`)
-                .addFields(
-                    { name: '⏰ When', value: `${timeFormatted.relative}\n(<t:${timeFormatted.timestamp}:F>)`, inline: true },
-                    { name: '🆔 ID', value: `${reminderId}`, inline: true }
-                )
-                .setFooter({ text: `Use /reminders to view all your reminders` });
-
-            if (isRemindingOther) {
-                embed.addFields({
-                    name: '👤 Target',
-                    value: `<@${targetUser.id}>`,
-                    inline: true
-                });
-            }
-
-            // Reply immediately - no defer needed!
-            console.log(`📤 Sending success response...`);
-            await interaction.reply({ embeds: [embed] });
-
+            // Simple confirmation message
+            const targetText = isRemindingOther
+                ? ` for ${targetUser.username}`
+                : "";
+            await interaction.editReply({
+                content: `✅ Reminder set${targetText} for ${timeFormatted.relative}`,
+                allowedMentions: { users: [] }, // Don't ping anyone in confirmation
+            });
         } catch (error) {
-            console.error('Error creating reminder:', error);
-            
-            const embed = new EmbedBuilder()
-                .setColor('#ff4444')
-                .setTitle('❌ Error')
-                .setDescription('Sorry, there was an error creating your reminder. Please try again.');
+            console.error("Error creating reminder:", error);
 
             try {
-                if (interaction.deferred || interaction.replied) {
-                    await interaction.editReply({ embeds: [embed] });
-                } else {
-                    await interaction.reply({ embeds: [embed], ephemeral: true });
-                }
+                await interaction.editReply({
+                    content: "❌ Error creating reminder. Please try again.",
+                });
             } catch (replyError) {
-                console.error('Failed to send error response:', replyError);
+                console.error("Failed to send error response:", replyError);
             }
         }
-    }
+    },
 };

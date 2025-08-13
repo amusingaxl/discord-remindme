@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import database from "../database/database.js";
 import TimeParser from "../utils/timeParser.js";
-import moment from "moment-timezone";
+import { DateTime } from "luxon";
 
 export default {
     data: new SlashCommandBuilder()
@@ -70,9 +70,9 @@ export default {
             }
 
             if (!newTimezone) {
-                const currentTime = moment()
-                    .tz(userRecord.timezone)
-                    .format("YYYY-MM-DD HH:mm:ss z");
+                const currentTime = DateTime.now()
+                    .setZone(userRecord.timezone)
+                    .toFormat("yyyy-MM-dd HH:mm:ss ZZZZ");
 
                 const embed = new EmbedBuilder()
                     .setColor("#0099ff")
@@ -104,9 +104,9 @@ export default {
 
             await database.updateUserTimezone(interaction.user.id, newTimezone);
 
-            const newTime = moment()
-                .tz(newTimezone)
-                .format("YYYY-MM-DD HH:mm:ss z");
+            const newTime = DateTime.now()
+                .setZone(newTimezone)
+                .toFormat("yyyy-MM-dd HH:mm:ss ZZZZ");
 
             const embed = new EmbedBuilder()
                 .setColor("#00ff88")

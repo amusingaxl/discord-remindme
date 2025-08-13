@@ -1,11 +1,11 @@
 import * as chrono from "chrono-node";
-import moment from "moment-timezone";
+import { DateTime, IANAZone } from "luxon";
 
 class TimeParser {
     static parseTimeString(timeString, userTimezone = "UTC") {
-        const now = moment().tz(userTimezone);
+        const now = DateTime.now().setZone(userTimezone);
 
-        const results = chrono.parse(timeString, now.toDate(), {
+        const results = chrono.parse(timeString, now.toJSDate(), {
             timezone: userTimezone === "UTC" ? undefined : userTimezone,
         });
 
@@ -14,24 +14,22 @@ class TimeParser {
         }
 
         const result = results[0];
-        let parsedDate = moment(result.date());
+        let parsedDate = DateTime.fromJSDate(result.date()).setZone(
+            userTimezone,
+        );
 
-        if (userTimezone !== "UTC") {
-            parsedDate = parsedDate.tz(userTimezone);
-        }
-
-        if (parsedDate.isBefore(now)) {
+        if (parsedDate < now) {
             if (this.isRelativeTime(timeString)) {
-                parsedDate = parsedDate.add(1, "day");
+                parsedDate = parsedDate.plus({ days: 1 });
             } else {
                 return null;
             }
         }
 
         return {
-            date: parsedDate.utc().toDate(),
+            date: parsedDate.toUTC().toJSDate(),
             originalTimezone: userTimezone,
-            displayTime: parsedDate.format("YYYY-MM-DD HH:mm:ss z"),
+            displayTime: parsedDate.toFormat("yyyy-MM-dd HH:mm:ss ZZZZ"),
             isValid: true,
         };
     }
@@ -61,10 +59,10 @@ class TimeParser {
     }
 
     static formatReminderTime(date, timezone = "UTC", locale = "en-US") {
-        const momentDate = moment(date).tz(timezone);
-        const now = moment().tz(timezone);
+        const reminderDate = DateTime.fromJSDate(date).setZone(timezone);
+        const now = DateTime.now().setZone(timezone);
 
-        const diffMs = momentDate.valueOf() - now.valueOf();
+        const diffMs = reminderDate.toMillis() - now.toMillis();
         const diffSeconds = Math.floor(diffMs / 1000);
         const diffMinutes = Math.floor(diffMs / (1000 * 60));
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -96,21 +94,22 @@ class TimeParser {
                 minute: "2-digit",
                 hour12: true,
             });
-            timeDisplay = dtf.format(momentDate.toDate());
+            timeDisplay = dtf.format(reminderDate.toJSDate());
         }
 
-        const fullFormat = momentDate.format("YYYY-MM-DD [at] h:mm A z");
+        const fullFormat = reminderDate.toFormat("yyyy-MM-dd 'at' h:mm a ZZZZ");
 
         return {
             relative: timeDisplay,
             absolute: fullFormat,
-            timestamp: Math.floor(momentDate.valueOf() / 1000),
+            timestamp: Math.floor(reminderDate.toMillis() / 1000),
         };
     }
 
     static getSupportedTimezones() {
-        // Get all timezone names from moment-timezone
-        const allTimezones = moment.tz.names();
+        // Get all IANA timezone names that Luxon supports
+        // We'll use Intl API to get supported timezones
+        const allTimezones = Intl.supportedValuesOf("timeZone");
 
         // Filter out some deprecated/less common ones and prioritize popular ones
         const popularTimezones = [
@@ -195,7 +194,7 @@ class TimeParser {
     }
 
     static validateTimezone(timezone) {
-        return moment.tz.zone(timezone) !== null;
+        return IANAZone.create(timezone).isValid;
     }
 }
 

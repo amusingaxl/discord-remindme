@@ -10,8 +10,10 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies and rebuild sqlite3 bindings
+# First install without scripts to avoid husky, then rebuild only sqlite3
+RUN npm ci --only=production --ignore-scripts && \
+    npm rebuild sqlite3
 
 # Copy application files
 COPY src/ ./src/

@@ -1,19 +1,29 @@
 import sqlite3 from "sqlite3";
 import path from "path";
 import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 class Database {
     constructor() {
-        const dbPath = path.join(__dirname, "../../database/reminders.db");
+        // Use DATABASE_PATH from environment or fallback to local path
+        const dbPath =
+            process.env.DATABASE_PATH ||
+            path.join(__dirname, "../../database/reminders.db");
         const Database = sqlite3.verbose().Database;
+
+        // Ensure directory exists for the database
+        const dbDir = path.dirname(dbPath);
+
         this.db = new Database(dbPath, (err) => {
             if (err) {
                 console.error("Error opening database:", err.message);
             } else {
-                console.log("Connected to SQLite database");
+                console.log(`Connected to SQLite database at: ${dbPath}`);
                 this.init();
             }
         });

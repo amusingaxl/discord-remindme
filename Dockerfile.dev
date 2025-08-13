@@ -1,10 +1,9 @@
 # Development Dockerfile with nodemon for hot reload
 FROM node:lts-alpine
 
-# Install build dependencies and development tools
-RUN apk add --no-cache python3 make g++ sqlite bash
+# Install SQLite
+RUN apk add --no-cache sqlite
 
-# Create app directory
 WORKDIR /app
 
 # Copy package files
@@ -16,15 +15,11 @@ RUN npm ci
 # Install nodemon globally for hot reload
 RUN npm install -g nodemon
 
-# Create volume mount points
-RUN mkdir -p /app/data /app/logs
+# Create data directory and set ownership to node user
+RUN mkdir -p /app/data && chown -R node:node /app/data
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
-    chown -R nodejs:nodejs /app
+# Use the existing node user from base image
+USER node
 
-USER nodejs
-
-# Default command (can be overridden)
+# Default command
 CMD ["nodemon", "--watch", "src", "--ext", "js,json", "src/bot.js"]

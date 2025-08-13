@@ -39,7 +39,13 @@
       "eslint --fix",
       "prettier --write"
     ],
-    "src/**/*.{json,md}": [
+    "**/*.{json,jsonc}": [
+      "prettier --write"
+    ],
+    "**/*.{yml,yaml}": [
+      "prettier --write"
+    ],
+    "src/**/*.md": [
       "prettier --write"
     ]
   }

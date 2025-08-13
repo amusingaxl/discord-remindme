@@ -1,62 +1,62 @@
 name: CI
 
 on:
-    push:
-        branches: [master, main]
-    pull_request:
-        branches: [master, main]
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
 
 jobs:
-    lint-and-test:
-        runs-on: ubuntu-latest
+  lint-and-test:
+    runs-on: ubuntu-latest
 
-        strategy:
-            matrix:
-                node-version: [20.x, 22.x]
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
 
-        steps:
-            - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Use Node.js ${{ matrix.node-version }}
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ matrix.node-version }}
-                  cache: "npm"
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
 
-            - name: Install dependencies
-              run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-            - name: Run ESLint
-              run: npm run lint
+      - name: Run ESLint
+        run: npm run lint
 
-            - name: Check Prettier formatting
-              run: npm run format:check
+      - name: Check Prettier formatting
+        run: npm run format:check
 
-    deploy-commands:
-        runs-on: ubuntu-latest
-        needs: lint-and-test
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+  deploy-commands:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
-        steps:
-            - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 22.x
-                  cache: "npm"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: "npm"
 
-            - name: Install dependencies
-              run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-            - name: Deploy Discord commands
-              env:
-                  DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
-                  DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
-              run: |
-                  if [ -n "$DISCORD_TOKEN" ] && [ -n "$DISCORD_APPLICATION_ID" ]; then
-                    npm run deploy
-                    echo "✅ Discord commands deployed successfully"
-                  else
-                    echo "⚠️ Skipping Discord command deployment (secrets not configured)"
-                  fi
+      - name: Deploy Discord commands
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
+        run: |
+          if [ -n "$DISCORD_TOKEN" ] && [ -n "$DISCORD_APPLICATION_ID" ]; then
+            npm run deploy
+            echo "✅ Discord commands deployed successfully"
+          else
+            echo "⚠️ Skipping Discord command deployment (secrets not configured)"
+          fi

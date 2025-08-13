@@ -1,7 +1,7 @@
 services:
   # Development Bot Service with hot reload
   bot-dev:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile.dev
     container_name: discord-reminder-bot-dev

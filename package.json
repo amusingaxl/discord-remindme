@@ -45,7 +45,7 @@
     "**/*.{yml,yaml}": [
       "prettier --write"
     ],
-    "src/**/*.md": [
+    "**/*.{md,mdx}": [
       "prettier --write"
     ]
   }

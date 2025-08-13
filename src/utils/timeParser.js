@@ -60,27 +60,43 @@ class TimeParser {
         ];
     }
 
-    static formatReminderTime(date, timezone = "UTC") {
+    static formatReminderTime(date, timezone = "UTC", locale = "en-US") {
         const momentDate = moment(date).tz(timezone);
         const now = moment().tz(timezone);
 
-        const diffSeconds = momentDate.diff(now, "seconds");
-        const diffMinutes = momentDate.diff(now, "minutes");
-        const diffHours = momentDate.diff(now, "hours");
-        const diffDays = momentDate.diff(now, "days");
+        const diffMs = momentDate.valueOf() - now.valueOf();
+        const diffSeconds = Math.floor(diffMs / 1000);
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffWeeks = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 7));
 
+        // Use Intl.RelativeTimeFormat for better i18n support
+        const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "always" });
         let timeDisplay = "";
 
-        if (diffSeconds < 60) {
-            timeDisplay = `in ${diffSeconds} second${diffSeconds !== 1 ? "s" : ""}`;
-        } else if (diffMinutes < 60) {
-            timeDisplay = `in ${diffMinutes} minute${diffMinutes !== 1 ? "s" : ""}`;
-        } else if (diffHours < 24) {
-            timeDisplay = `in ${diffHours} hour${diffHours !== 1 ? "s" : ""}`;
-        } else if (diffDays < 7) {
-            timeDisplay = `in ${diffDays} day${diffDays !== 1 ? "s" : ""}`;
+        // Choose the most appropriate unit
+        if (Math.abs(diffSeconds) < 60) {
+            timeDisplay = rtf.format(diffSeconds, "second");
+        } else if (Math.abs(diffMinutes) < 60) {
+            timeDisplay = rtf.format(diffMinutes, "minute");
+        } else if (Math.abs(diffHours) < 24) {
+            timeDisplay = rtf.format(diffHours, "hour");
+        } else if (Math.abs(diffDays) < 7) {
+            timeDisplay = rtf.format(diffDays, "day");
+        } else if (Math.abs(diffWeeks) < 4) {
+            timeDisplay = rtf.format(diffWeeks, "week");
         } else {
-            timeDisplay = momentDate.format("MMM Do, YYYY [at] h:mm A");
+            // For dates far in the future, use absolute format
+            const dtf = new Intl.DateTimeFormat(locale, {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+            });
+            timeDisplay = dtf.format(momentDate.toDate());
         }
 
         const fullFormat = momentDate.format("YYYY-MM-DD [at] h:mm A z");

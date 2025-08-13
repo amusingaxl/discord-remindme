@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import database from "../database/database.js";
-import TimeParser from "../utils/timeParser.js";
+import { TimeParser } from "../utils/timeParser.js";
 
 export default {
     data: new SlashCommandBuilder()
@@ -13,7 +12,6 @@ export default {
                 .addChoices(
                     { name: "List active reminders", value: "list" },
                     { name: "Delete a reminder", value: "delete" },
-                    { name: "View completed reminders", value: "completed" },
                 )
                 .setRequired(false),
         )
@@ -24,7 +22,7 @@ export default {
                 .setRequired(false),
         ),
 
-    async execute(interaction) {
+    async execute(interaction, database) {
         const action = interaction.options.getString("action") || "list";
         const reminderId = interaction.options.getInteger("id");
 
@@ -84,10 +82,9 @@ export default {
                 });
             }
 
-            const includeCompleted = action === "completed";
             const reminders = await database.getUserReminders(
                 interaction.user.id,
-                includeCompleted,
+                false, // Only get active reminders
             );
 
             if (reminders.length === 0) {
@@ -95,9 +92,7 @@ export default {
                     .setColor("#ffaa00")
                     .setTitle("📭 No Reminders")
                     .setDescription(
-                        includeCompleted
-                            ? "You have no completed reminders."
-                            : "You have no active reminders.\n\nUse `/remind` to create a new reminder!",
+                        "You have no active reminders.\n\nUse `/remind` to create a new reminder!",
                     );
 
                 return await interaction.reply({
@@ -108,16 +103,11 @@ export default {
 
             const embed = new EmbedBuilder()
                 .setColor("#0099ff")
-                .setTitle(
-                    includeCompleted
-                        ? "✅ Completed Reminders"
-                        : "📋 Your Active Reminders",
-                );
+                .setTitle("📋 Your Active Reminders");
 
             const activeReminders = reminders.filter((r) => !r.is_completed);
-            const completedReminders = reminders.filter((r) => r.is_completed);
 
-            if (!includeCompleted && activeReminders.length > 0) {
+            if (activeReminders.length > 0) {
                 const reminderList = activeReminders
                     .slice(0, 10)
                     .map((reminder) => {
@@ -140,29 +130,6 @@ export default {
                 if (activeReminders.length > 10) {
                     embed.setFooter({
                         text: `Showing 10 of ${activeReminders.length} reminders`,
-                    });
-                }
-            } else if (includeCompleted && completedReminders.length > 0) {
-                const reminderList = completedReminders
-                    .slice(0, 10)
-                    .map((reminder) => {
-                        const completedTime = new Date(
-                            reminder.scheduled_time,
-                        ).toLocaleDateString();
-                        const targetInfo =
-                            reminder.target_user_id &&
-                            reminder.target_user_id !== reminder.user_id
-                                ? ` → <@${reminder.target_user_id}>`
-                                : "";
-
-                        return `**${reminder.id}** - ${reminder.message.substring(0, 50)}${reminder.message.length > 50 ? "..." : ""}${targetInfo}\n✅ Completed on ${completedTime}`;
-                    });
-
-                embed.setDescription(reminderList.join("\n\n"));
-
-                if (completedReminders.length > 10) {
-                    embed.setFooter({
-                        text: `Showing 10 of ${completedReminders.length} completed reminders`,
                     });
                 }
             }

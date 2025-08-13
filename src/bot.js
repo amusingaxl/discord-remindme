@@ -1,14 +1,32 @@
-import { Client, GatewayIntentBits, Collection } from "discord.js";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import ReminderScheduler from "./utils/scheduler.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+    Client,
+    GatewayIntentBits,
+    Collection,
+    EmbedBuilder,
+} from "discord.js";
 import dotenv from "dotenv";
+import { ReminderScheduler } from "./utils/scheduler.js";
+import { TimeParser } from "./utils/timeParser.js";
+import { Database } from "./database/database.js";
+
+// Import all commands
+import remindCommand from "./commands/remind.js";
+import remindersCommand from "./commands/reminders.js";
+import timezoneCommand from "./commands/timezone.js";
+import helpCommand from "./commands/help.js";
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Initialize database with path from environment variable
+if (!process.env.DATABASE_PATH) {
+    throw new Error("DATABASE_PATH environment variable is required");
+}
+const database = new Database(process.env.DATABASE_PATH);
 
 const client = new Client({
     intents: [
@@ -21,37 +39,32 @@ const client = new Client({
 
 client.commands = new Collection();
 
-// Load commands
-const commandsPath = path.join(__dirname, "commands");
-const commandFiles = fs
-    .readdirSync(commandsPath)
-    .filter((file) => file.endsWith(".js"));
+// Register all commands
+const commands = [
+    remindCommand,
+    remindersCommand,
+    timezoneCommand,
+    helpCommand,
+];
 
-const loadCommands = async () => {
-    for (const file of commandFiles) {
-        const filePath = path.join(commandsPath, file);
-        const command = await import(`file://${filePath}`);
-
-        if ("data" in command.default && "execute" in command.default) {
-            client.commands.set(command.default.data.name, command.default);
-            console.log(`📝 Loaded command: ${command.default.data.name}`);
-        } else {
-            console.log(
-                `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`,
-            );
-        }
+for (const command of commands) {
+    if ("data" in command && "execute" in command) {
+        client.commands.set(command.data.name, command);
+        console.log(`📝 Loaded command: ${command.data.name}`);
+    } else {
+        console.log(
+            `[WARNING] Command is missing a required "data" or "execute" property.`,
+        );
     }
-};
-
-await loadCommands();
+}
 
 console.log(
     `🎯 Loaded ${client.commands.size} commands:`,
     Array.from(client.commands.keys()),
 );
 
-// Initialize scheduler
-const scheduler = new ReminderScheduler(client);
+// Initialize scheduler with database
+const scheduler = new ReminderScheduler(client, database);
 
 client.once("ready", () => {
     console.log(`✅ Bot is ready! Logged in as ${client.user.tag}`);
@@ -171,9 +184,7 @@ async function handleRemindCommand(message) {
         });
     }
 
-    // Import required modules
-    const database = (await import("./database/database.js")).default;
-    const TimeParser = (await import("./utils/timeParser.js")).default;
+    // Use imported modules
 
     try {
         // Get user's timezone
@@ -221,7 +232,7 @@ async function handleRemindCommand(message) {
             ? ` for ${targetUser.username}`
             : "";
         await message.reply({
-            content: `✅ Reminder set${targetText} for ${timeFormatted.relative}`,
+            content: `⏰ Reminder set${targetText} for ${timeFormatted.relative}`,
             allowedMentions: { repliedUser: false, users: [] }, // Don't ping anyone in confirmation
         });
     } catch (error) {
@@ -262,7 +273,7 @@ client.on("interactionCreate", async (interaction) => {
         }
 
         try {
-            await command.execute(interaction);
+            await command.execute(interaction, database);
         } catch (error) {
             console.error("Error executing command:", error);
 
@@ -290,7 +301,7 @@ client.on("interactionCreate", async (interaction) => {
         }
 
         try {
-            await command.execute(interaction);
+            await command.execute(interaction, database);
         } catch (error) {
             console.error("Error executing context menu command:", error);
 
@@ -315,13 +326,13 @@ client.on("interactionCreate", async (interaction) => {
         if (!command || !command.autocomplete) return;
 
         try {
-            await command.autocomplete(interaction);
+            await command.autocomplete(interaction, database);
         } catch (error) {
             console.error("Error handling autocomplete:", error);
         }
     } else if (interaction.isModalSubmit()) {
         try {
-            await handleModalSubmit(interaction);
+            await handleModalSubmit(interaction, database);
         } catch (error) {
             console.error("Error handling modal submit:", error);
             if (!interaction.replied && !interaction.deferred) {
@@ -343,7 +354,7 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 // Handle modal submissions for message reminders
-async function handleModalSubmit(interaction) {
+async function handleModalSubmit(interaction, database) {
     if (interaction.customId.startsWith("remind_modal_")) {
         const messageId = interaction.customId.replace("remind_modal_", "");
         const timeString =
@@ -365,10 +376,7 @@ async function handleModalSubmit(interaction) {
             });
         }
 
-        // Import the required modules
-        const { EmbedBuilder } = await import("discord.js");
-        const database = (await import("./database/database.js")).default;
-        const TimeParser = (await import("./utils/timeParser.js")).default;
+        // Use imported modules
 
         try {
             // Get user's timezone preference

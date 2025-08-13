@@ -54,7 +54,7 @@ export const MESSAGES = {
             "❌ You're sending commands too quickly. Please wait a moment.",
     },
     SUCCESS: {
-        REMINDER_SET: "✅ Reminder set",
+        REMINDER_SET: "⏰ Reminder set",
         REMINDER_DELETED: "✅ Reminder deleted",
         TIMEZONE_UPDATED: "✅ Timezone updated",
     },

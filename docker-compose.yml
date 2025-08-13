@@ -13,33 +13,11 @@ services:
       - ./logs:/app/logs
     networks:
       - remindme-network-prod
-    depends_on:
-      - database-backup
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-
-  # Database Backup Service (runs periodically)
-  database-backup:
-    image: alpine:latest
-    restart: unless-stopped
-    volumes:
-      - bot-data:/data:ro
-      - ./backups:/backups
-    entrypoint: |
-      sh -c 'while true; do
-        echo "Backing up database at $$(date)"
-        if [ -f /data/reminders.sqlite ]; then
-          cp /data/reminders.sqlite /backups/reminders_$$(date +%Y%m%d_%H%M%S).sqlite
-          # Keep only last 7 days of backups
-          find /backups -name "reminders_*.sqlite" -mtime +7 -delete
-        fi
-        sleep 86400
-      done'
-    networks:
-      - remindme-network-prod
 
   # Optional: Database viewer for debugging
   database-viewer:

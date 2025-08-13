@@ -1,6 +1,5 @@
 import { SlashCommandBuilder } from "discord.js";
-import database from "../database/database.js";
-import TimeParser from "../utils/timeParser.js";
+import { TimeParser } from "../utils/timeParser.js";
 
 export default {
     data: new SlashCommandBuilder()
@@ -37,7 +36,7 @@ export default {
                 .setRequired(false),
         ),
 
-    async execute(interaction) {
+    async execute(interaction, database) {
         const timeString = interaction.options.getString("time");
         const message = interaction.options.getString("message");
         const messageLink = interaction.options.getString("message_link");
@@ -70,7 +69,7 @@ export default {
                 });
             }
 
-            const [, _guildId, channelId, messageId] = urlMatch;
+            const [, , channelId, messageId] = urlMatch;
             referencedMessageId = messageId;
             referencedMessageUrl = messageLink;
 
@@ -163,7 +162,7 @@ export default {
                 ? ` for ${targetUser.username}`
                 : "";
             await interaction.editReply({
-                content: `✅ Reminder set${targetText} for ${timeFormatted.relative}`,
+                content: `⏰ Reminder set${targetText} for ${timeFormatted.relative}`,
                 allowedMentions: { users: [] }, // Don't ping anyone in confirmation
             });
         } catch (error) {

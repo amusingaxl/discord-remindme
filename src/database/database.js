@@ -1,25 +1,23 @@
 import sqlite3 from "sqlite3";
+import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
-import dotenv from "dotenv";
 
-dotenv.config();
+export class Database {
+    constructor(dbPath) {
+        if (!dbPath) {
+            throw new Error("Database path is required");
+        }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-class Database {
-    constructor() {
-        // Use DATABASE_PATH from environment or fallback to local path
-        const dbPath =
-            process.env.DATABASE_PATH ||
-            path.join(__dirname, "../../database/reminders.db");
-        const Database = sqlite3.verbose().Database;
-
-        // Ensure directory exists for the database
+        // Ensure the directory exists
         const dbDir = path.dirname(dbPath);
+        if (!fs.existsSync(dbDir)) {
+            fs.mkdirSync(dbDir, { recursive: true });
+            console.log(`Created database directory: ${dbDir}`);
+        }
 
-        this.db = new Database(dbPath, (err) => {
+        const SQLiteDatabase = sqlite3.verbose().Database;
+
+        this.db = new SQLiteDatabase(dbPath, (err) => {
             if (err) {
                 console.error("Error opening database:", err.message);
             } else {
@@ -35,8 +33,7 @@ class Database {
                 CREATE TABLE IF NOT EXISTS users (
                     id TEXT PRIMARY KEY,
                     discord_id TEXT UNIQUE NOT NULL,
-                    timezone TEXT DEFAULT 'UTC',
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    timezone TEXT DEFAULT 'UTC'
                 )
             `);
 
@@ -50,52 +47,18 @@ class Database {
                     message TEXT NOT NULL,
                     scheduled_time DATETIME NOT NULL,
                     timezone TEXT DEFAULT 'UTC',
-                    is_completed BOOLEAN DEFAULT FALSE,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     referenced_message_id TEXT,
                     referenced_message_url TEXT,
                     FOREIGN KEY (user_id) REFERENCES users (discord_id)
                 )
             `);
 
-            // Add missing columns to existing reminders table (migration)
-            this.db.run(
-                `
-                ALTER TABLE reminders ADD COLUMN referenced_message_id TEXT
-            `,
-                (err) => {
-                    if (err && !err.message.includes("duplicate column name")) {
-                        console.error(
-                            "Error adding referenced_message_id column:",
-                            err.message,
-                        );
-                    }
-                },
-            );
-
-            this.db.run(
-                `
-                ALTER TABLE reminders ADD COLUMN referenced_message_url TEXT
-            `,
-                (err) => {
-                    if (err && !err.message.includes("duplicate column name")) {
-                        console.error(
-                            "Error adding referenced_message_url column:",
-                            err.message,
-                        );
-                    }
-                },
-            );
-
             // Create indexes for better performance
             this.db.run(
-                `CREATE INDEX IF NOT EXISTS idx_reminders_scheduled_time ON reminders(scheduled_time)`,
+                `CREATE INDEX IF NOT EXISTS idx_reminders_scheduled ON reminders(scheduled_time)`,
             );
             this.db.run(
                 `CREATE INDEX IF NOT EXISTS idx_reminders_user_id ON reminders(user_id)`,
-            );
-            this.db.run(
-                `CREATE INDEX IF NOT EXISTS idx_reminders_active ON reminders(is_completed, scheduled_time)`,
             );
             this.db.run(
                 `CREATE INDEX IF NOT EXISTS idx_users_discord_id ON users(discord_id)`,
@@ -202,7 +165,7 @@ class Database {
         return new Promise((resolve, reject) => {
             const now = new Date().toISOString();
             this.db.all(
-                "SELECT * FROM reminders WHERE is_completed = FALSE AND scheduled_time <= ?",
+                "SELECT * FROM reminders WHERE scheduled_time <= ?",
                 [now],
                 (err, rows) => {
                     if (err) {
@@ -215,11 +178,10 @@ class Database {
         });
     }
 
-    async getUserReminders(discordId, includeCompleted = false) {
+    async getUserReminders(discordId) {
         return new Promise((resolve, reject) => {
-            const query = includeCompleted
-                ? "SELECT * FROM reminders WHERE user_id = ? OR target_user_id = ? ORDER BY scheduled_time DESC"
-                : "SELECT * FROM reminders WHERE (user_id = ? OR target_user_id = ?) AND is_completed = FALSE ORDER BY scheduled_time ASC";
+            const query =
+                "SELECT * FROM reminders WHERE (user_id = ? OR target_user_id = ?) ORDER BY scheduled_time ASC";
 
             this.db.all(query, [discordId, discordId], (err, rows) => {
                 if (err) {
@@ -232,9 +194,10 @@ class Database {
     }
 
     async completeReminder(reminderId) {
+        // Delete the reminder from database after sending notification
         return new Promise((resolve, reject) => {
             const stmt = this.db.prepare(`
-                UPDATE reminders SET is_completed = TRUE WHERE id = ?
+                DELETE FROM reminders WHERE id = ?
             `);
 
             stmt.run([reminderId], function (err) {
@@ -280,5 +243,3 @@ class Database {
         });
     }
 }
-
-export default new Database();

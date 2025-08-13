@@ -1,12 +1,14 @@
 import * as chrono from "chrono-node";
 import { DateTime, IANAZone } from "luxon";
 
-class TimeParser {
+export class TimeParser {
     static parseTimeString(timeString, userTimezone = "UTC") {
         const now = DateTime.now().setZone(userTimezone);
 
+        // Let chrono-node handle all parsing with forwardDate to ensure future times
         const results = chrono.parse(timeString, now.toJSDate(), {
-            timezone: userTimezone === "UTC" ? undefined : userTimezone,
+            timezone: userTimezone,
+            forwardDate: true, // Interpret ambiguous times as future
         });
 
         if (results.length === 0) {
@@ -14,22 +16,21 @@ class TimeParser {
         }
 
         const result = results[0];
-        let parsedDate = DateTime.fromJSDate(result.date()).setZone(
-            userTimezone,
-        );
 
+        // Get the parsed date - chrono-node handles timezones internally
+        const parsedDate = DateTime.fromJSDate(result.date());
+
+        // Final check: don't allow dates in the past
         if (parsedDate < now) {
-            if (this.isRelativeTime(timeString)) {
-                parsedDate = parsedDate.plus({ days: 1 });
-            } else {
-                return null;
-            }
+            return null;
         }
 
         return {
             date: parsedDate.toUTC().toJSDate(),
             originalTimezone: userTimezone,
-            displayTime: parsedDate.toFormat("yyyy-MM-dd HH:mm:ss ZZZZ"),
+            displayTime: parsedDate
+                .setZone(userTimezone)
+                .toFormat("yyyy-MM-dd HH:mm:ss ZZZZ"),
             isValid: true,
         };
     }
@@ -197,5 +198,3 @@ class TimeParser {
         return IANAZone.create(timezone).isValid;
     }
 }
-
-export default TimeParser;

@@ -1,9 +1,9 @@
-import database from "../database/database.js";
-import TimeParser from "./timeParser.js";
+import { TimeParser } from "./timeParser.js";
 
 class ReminderScheduler {
-    constructor(client) {
+    constructor(client, database) {
         this.client = client;
+        this.database = database;
         this.checkInterval = null;
     }
 
@@ -26,7 +26,7 @@ class ReminderScheduler {
 
     async checkReminders() {
         try {
-            const activeReminders = await database.getActiveReminders();
+            const activeReminders = await this.database.getActiveReminders();
             console.log(
                 `🔍 Checking reminders... Found ${activeReminders.length} due reminders`,
             );
@@ -66,13 +66,9 @@ class ReminderScheduler {
                 console.error(
                     `Channel ${reminder.channel_id} not found for reminder ${reminder.id}`,
                 );
-                await database.completeReminder(reminder.id);
+                // Keep the reminder in case channel becomes available later
                 return;
             }
-
-            // Get user's timezone preference for the person being reminded
-            const userRecord = await database.getUser(targetUserId);
-            // const userTimezone = userRecord?.timezone || "UTC"; // Not currently used
 
             // Build simple text message with user mention
             let reminderText;
@@ -128,9 +124,9 @@ class ReminderScheduler {
                             `💬 Sent reminder with clickable embed for message ${reminder.referenced_message_id} in channel ${channel.name} for user ${targetUserId}`,
                         );
 
-                        await database.completeReminder(reminder.id);
+                        await this.database.completeReminder(reminder.id);
                         console.log(
-                            `✅ Reminder ${reminder.id} completed and sent to ${targetUserId}`,
+                            `✅ Reminder ${reminder.id} sent and deleted for user ${targetUserId}`,
                         );
                         return; // Exit early since we sent the message
                     }
@@ -166,9 +162,9 @@ class ReminderScheduler {
                         );
 
                         await channel.send(messageOptions);
-                        await database.completeReminder(reminder.id);
+                        await this.database.completeReminder(reminder.id);
                         console.log(
-                            `✅ Reminder ${reminder.id} completed and sent to ${targetUserId}`,
+                            `✅ Reminder ${reminder.id} sent and deleted for user ${targetUserId}`,
                         );
                         return; // Exit early since we sent the message
                     }
@@ -191,41 +187,40 @@ class ReminderScheduler {
             );
             await channel.send(messageOptions);
 
-            await database.completeReminder(reminder.id);
+            await this.database.completeReminder(reminder.id);
             console.log(
-                `✅ Reminder ${reminder.id} completed and sent to ${targetUserId}`,
+                `✅ Reminder ${reminder.id} sent and deleted for user ${targetUserId}`,
             );
         } catch (error) {
             console.error(`Error processing reminder ${reminder.id}:`, error);
 
             if (error.code === 10003) {
                 console.log(
-                    `Channel not found for reminder ${reminder.id}, marking as completed`,
+                    `Channel not found for reminder ${reminder.id}, keeping for retry`,
                 );
-                await database.completeReminder(reminder.id);
+                // Don't delete - channel might become available
             } else if (error.code === 50013) {
                 console.log(
-                    `No permissions to send reminder ${reminder.id}, marking as completed`,
+                    `No permissions to send reminder ${reminder.id}, keeping for retry`,
                 );
-                await database.completeReminder(reminder.id);
+                // Don't delete - permissions might be granted later
             } else if (error.code === 50001) {
                 console.log(
-                    `Missing access to channel for reminder ${reminder.id}, marking as completed`,
+                    `Missing access to channel for reminder ${reminder.id}, keeping for retry`,
                 );
-                await database.completeReminder(reminder.id);
+                // Don't delete - access might be granted later
             }
         }
     }
 
     async getUpcomingReminders(limit = 10) {
         try {
-            const reminders = await database.db.all(
+            const reminders = await this.database.db.all(
                 `
                 SELECT r.*, u.timezone 
                 FROM reminders r 
                 LEFT JOIN users u ON r.user_id = u.discord_id 
-                WHERE r.is_completed = FALSE 
-                AND r.scheduled_time > datetime('now')
+                WHERE r.scheduled_time > datetime('now')
                 ORDER BY r.scheduled_time ASC 
                 LIMIT ?
             `,
@@ -246,4 +241,4 @@ class ReminderScheduler {
     }
 }
 
-export default ReminderScheduler;
+export { ReminderScheduler };

@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import database from "../database/database.js";
-import TimeParser from "../utils/timeParser.js";
+import { TimeParser } from "../utils/timeParser.js";
 import { DateTime } from "luxon";
 
 export default {
@@ -17,7 +16,7 @@ export default {
                 .setAutocomplete(true),
         ),
 
-    async autocomplete(interaction) {
+    async autocomplete(interaction, _database) {
         const focusedValue = interaction.options.getFocused().toLowerCase();
         const timezones = TimeParser.getSupportedTimezones();
 
@@ -30,7 +29,7 @@ export default {
         );
     },
 
-    async execute(interaction) {
+    async execute(interaction, database) {
         const newTimezone = interaction.options.getString("timezone");
 
         try {

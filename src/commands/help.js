@@ -1,12 +1,12 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import TimeParser from "../utils/timeParser.js";
+import { TimeParser } from "../utils/timeParser.js";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("help")
         .setDescription("Get help with using the reminder bot"),
 
-    async execute(interaction) {
+    async execute(interaction, _database) {
         // Help command is simple, respond immediately
         const embed = new EmbedBuilder()
             .setColor("#0099ff")
@@ -51,8 +51,7 @@ export default {
                 {
                     name: "🗂️ Managing Reminders",
                     value: [
-                        "`/reminders list` - View active reminders",
-                        "`/reminders completed` - View completed reminders",
+                        "`/reminders` - View your active reminders",
                         "`/reminders delete <id>` - Delete a specific reminder",
                     ].join("\n"),
                     inline: false,

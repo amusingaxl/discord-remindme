@@ -11,7 +11,10 @@ export default [
         rules: {
             ...prettierConfig.rules,
             "prettier/prettier": "error",
-            "no-unused-vars": ["warn", { argsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" }],
+            "no-unused-vars": [
+                "warn",
+                { argsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+            ],
             "no-console": "off",
         },
         languageOptions: {

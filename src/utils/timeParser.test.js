@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeAll, afterAll, jest } from "@jest/globals";
-import { TimeParser } from "./timeParser.js";
+import { jest, describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import { DateTime } from "luxon";
+import { TimeParser } from "./timeParser.js";
 
 describe("TimeParser", () => {
     describe("parseTimeString", () => {

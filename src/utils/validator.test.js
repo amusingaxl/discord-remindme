@@ -1,6 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
-import { Validator } from "./validator.js";
 import { CONFIG } from "../constants/config.js";
+import { Validator } from "./validator.js";
 
 describe("Validator", () => {
     describe("validateDiscordId", () => {

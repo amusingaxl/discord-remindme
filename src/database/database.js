@@ -1,6 +1,6 @@
-import SQLite from "better-sqlite3";
 import fs from "fs";
 import path from "path";
+import SQLite from "better-sqlite3";
 
 export class Database {
     constructor(dbPath) {

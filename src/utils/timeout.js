@@ -1,11 +1,21 @@
-export function withTimeout(
+export async function withTimeout(
     promise,
     timeoutMs = 2000,
     errorMessage = "Operation timed out",
 ) {
-    const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(errorMessage)), timeoutMs),
-    );
+    let timeoutId;
+    const timeout = new Promise((_, reject) => {
+        timeoutId = setTimeout(
+            () => reject(new Error(errorMessage)),
+            timeoutMs,
+        );
+    });
 
-    return Promise.race([promise, timeout]);
+    try {
+        return await Promise.race([promise, timeout]);
+    } finally {
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+        }
+    }
 }

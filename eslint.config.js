@@ -1,35 +1,19 @@
 import js from "@eslint/js";
-import prettier from "eslint-plugin-prettier";
-import prettierConfig from "eslint-config-prettier";
+import { flatConfigs as importConfigs } from "eslint-plugin-import";
+import prettierRecommended from "eslint-plugin-prettier/recommended";
+import globals from "globals";
 
 export default [
     js.configs.recommended,
+    importConfigs.recommended,
+    prettierRecommended,
     {
-        plugins: {
-            prettier,
-        },
-        rules: {
-            ...prettierConfig.rules,
-            "prettier/prettier": "error",
-            "no-unused-vars": [
-                "warn",
-                { argsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
-            ],
-            "no-console": "off",
-        },
+        rules: {},
         languageOptions: {
             ecmaVersion: "latest",
-            sourceType: "module",
             globals: {
-                console: "readonly",
-                process: "readonly",
-                Buffer: "readonly",
-                __dirname: "readonly",
-                __filename: "readonly",
-                setTimeout: "readonly",
-                clearTimeout: "readonly",
-                setInterval: "readonly",
-                clearInterval: "readonly",
+                ...globals.node,
+                ...globals.jest,
             },
         },
     },

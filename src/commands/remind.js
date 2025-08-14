@@ -81,7 +81,7 @@ export default {
                     originalMessage =
                         await targetChannel.messages.fetch(messageId);
                 }
-            } catch (_error) {
+            } catch {
                 return await interaction.reply({
                     content:
                         "❌ Could not access the referenced message. Make sure the bot has permission to view that channel and the message exists.",

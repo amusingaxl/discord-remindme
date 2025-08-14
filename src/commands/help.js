@@ -6,10 +6,7 @@ export default {
         .setName("help")
         .setDescription("Get help with using the reminder bot"),
 
-    async execute(
-        interaction,
-        { userService: _userService, reminderService: _reminderService },
-    ) {
+    async execute(interaction) {
         // Help command is simple, respond immediately
         const embed = new EmbedBuilder()
             .setColor("#0099ff")

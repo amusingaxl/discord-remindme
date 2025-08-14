@@ -7,17 +7,17 @@ import {
     EmbedBuilder,
 } from "discord.js";
 import dotenv from "dotenv";
-import { ReminderScheduler } from "./utils/scheduler.js";
-import { TimeParser } from "./utils/timeParser.js";
-import { Database } from "./database/database.js";
-import { UserService } from "./services/userService.js";
-import { ReminderService } from "./services/reminderService.js";
-
-// Import all commands
+import helpCommand from "./commands/help.js";
 import remindCommand from "./commands/remind.js";
 import remindersCommand from "./commands/reminders.js";
 import timezoneCommand from "./commands/timezone.js";
-import helpCommand from "./commands/help.js";
+import { Database } from "./database/database.js";
+import { ReminderService } from "./services/reminderService.js";
+import { UserService } from "./services/userService.js";
+import { ReminderScheduler } from "./utils/scheduler.js";
+import { TimeParser } from "./utils/timeParser.js";
+
+// Import all commands
 
 dotenv.config();
 
@@ -173,7 +173,7 @@ async function handleRemindCommand(message) {
             );
             referencedMessageId = referencedMessage.id;
             referencedMessageUrl = `https://discord.com/channels/${message.guild?.id || "@me"}/${referencedMessage.channel.id}/${referencedMessage.id}`;
-        } catch (_error) {
+        } catch {
             // Ignore error if message cannot be fetched
         }
     }

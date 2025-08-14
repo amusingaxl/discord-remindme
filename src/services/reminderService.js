@@ -23,8 +23,8 @@ export class ReminderService {
 
         const result = this.db.run(
             `INSERT INTO reminders (
-                user_id, target_user_id, guild_id, channel_id, 
-                message, scheduled_time, timezone, 
+                user_id, target_user_id, guild_id, channel_id,
+                message, scheduled_time, timezone,
                 referenced_message_id, referenced_message_url
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
@@ -44,8 +44,8 @@ export class ReminderService {
 
     getUserReminders(discordId, includeCompleted = false) {
         const query = `
-            SELECT * FROM reminders 
-            WHERE (user_id = ? OR target_user_id = ?) 
+            SELECT * FROM reminders
+            WHERE (user_id = ? OR target_user_id = ?)
             ORDER BY scheduled_time ASC
         `;
         const reminders = this.db.all(query, [discordId, discordId]);
@@ -109,18 +109,18 @@ export class ReminderService {
     getUpcomingReminders(discordId, limit = 10) {
         if (discordId) {
             const query = `
-                SELECT * FROM reminders 
-                WHERE (user_id = ? OR target_user_id = ?) 
+                SELECT * FROM reminders
+                WHERE (user_id = ? OR target_user_id = ?)
                 AND scheduled_time > datetime('now')
-                ORDER BY scheduled_time ASC 
+                ORDER BY scheduled_time ASC
                 LIMIT ?
             `;
             return this.db.all(query, [discordId, discordId, limit]);
         } else {
             const query = `
-                SELECT * FROM reminders 
+                SELECT * FROM reminders
                 WHERE scheduled_time > datetime('now')
-                ORDER BY scheduled_time ASC 
+                ORDER BY scheduled_time ASC
                 LIMIT ?
             `;
             return this.db.all(query, [limit]);

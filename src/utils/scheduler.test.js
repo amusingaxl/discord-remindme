@@ -11,7 +11,7 @@ import { ReminderScheduler } from "./scheduler.js";
 describe("ReminderScheduler", () => {
     let scheduler;
     let mockClient;
-    let mockDatabase;
+    let mockReminderService;
     let consoleLogSpy;
     let consoleErrorSpy;
 
@@ -26,12 +26,12 @@ describe("ReminderScheduler", () => {
             },
         };
 
-        // Mock database
-        mockDatabase = {
-            getActiveReminders: jest.fn().mockResolvedValue([]),
-            deleteReminder: jest.fn().mockResolvedValue(),
-            completeReminder: jest.fn().mockResolvedValue(),
-            getUser: jest.fn().mockResolvedValue(null),
+        // Mock reminder service
+        mockReminderService = {
+            getActiveReminders: jest.fn().mockReturnValue([]),
+            deleteReminder: jest.fn().mockReturnValue(1),
+            completeReminder: jest.fn().mockReturnValue(1),
+            getUpcomingReminders: jest.fn().mockReturnValue([]),
         };
 
         // Mock console
@@ -42,7 +42,7 @@ describe("ReminderScheduler", () => {
         jest.clearAllTimers();
         jest.useFakeTimers();
 
-        scheduler = new ReminderScheduler(mockClient, mockDatabase);
+        scheduler = new ReminderScheduler(mockClient, mockReminderService);
     });
 
     afterEach(() => {
@@ -125,26 +125,28 @@ describe("ReminderScheduler", () => {
                 { id: 1, scheduled_time: "2025-01-01T12:00:00Z" },
                 { id: 2, scheduled_time: "2025-01-01T13:00:00Z" },
             ];
-            mockDatabase.getActiveReminders.mockResolvedValue(mockReminders);
+            mockReminderService.getActiveReminders.mockReturnValue(
+                mockReminders,
+            );
 
             const processReminderSpy = jest
                 .spyOn(scheduler, "processReminder")
-                .mockResolvedValue();
+                .mockReturnValue();
 
             await scheduler.checkReminders();
 
-            expect(mockDatabase.getActiveReminders).toHaveBeenCalled();
+            expect(mockReminderService.getActiveReminders).toHaveBeenCalled();
             expect(processReminderSpy).toHaveBeenCalledTimes(2);
             expect(processReminderSpy).toHaveBeenCalledWith(mockReminders[0]);
             expect(processReminderSpy).toHaveBeenCalledWith(mockReminders[1]);
         });
 
         it("should handle empty reminders list", async () => {
-            mockDatabase.getActiveReminders.mockResolvedValue([]);
+            mockReminderService.getActiveReminders.mockReturnValue([]);
 
             await scheduler.checkReminders();
 
-            expect(mockDatabase.getActiveReminders).toHaveBeenCalled();
+            expect(mockReminderService.getActiveReminders).toHaveBeenCalled();
             expect(consoleLogSpy).toHaveBeenCalledWith(
                 "🔍 Checking reminders... Found 0 due reminders",
             );
@@ -152,7 +154,9 @@ describe("ReminderScheduler", () => {
 
         it("should handle database errors gracefully", async () => {
             const error = new Error("Database error");
-            mockDatabase.getActiveReminders.mockRejectedValue(error);
+            mockReminderService.getActiveReminders.mockImplementation(() => {
+                throw error;
+            });
 
             await scheduler.checkReminders();
 
@@ -166,8 +170,10 @@ describe("ReminderScheduler", () => {
             const mockReminders = [
                 { id: 1, scheduled_time: "2025-01-01T12:00:00Z" },
             ];
-            mockDatabase.getActiveReminders.mockResolvedValue(mockReminders);
-            jest.spyOn(scheduler, "processReminder").mockResolvedValue();
+            mockReminderService.getActiveReminders.mockReturnValue(
+                mockReminders,
+            );
+            jest.spyOn(scheduler, "processReminder").mockReturnValue();
 
             await scheduler.checkReminders();
 
@@ -210,7 +216,7 @@ describe("ReminderScheduler", () => {
                 content:
                     "🔔 **Reminder** <@123456789012345678>: Test reminder\n👤 From: <@undefined>",
             });
-            expect(mockDatabase.completeReminder).toHaveBeenCalledWith(
+            expect(mockReminderService.completeReminder).toHaveBeenCalledWith(
                 reminder.id,
             );
         });
@@ -246,7 +252,7 @@ describe("ReminderScheduler", () => {
             expect(consoleErrorSpy).toHaveBeenCalledWith(
                 `Channel ${reminder.channel_id} not found for reminder ${reminder.id}`,
             );
-            expect(mockDatabase.completeReminder).not.toHaveBeenCalled();
+            expect(mockReminderService.completeReminder).not.toHaveBeenCalled();
         });
 
         it("should handle send errors gracefully", async () => {
@@ -267,7 +273,7 @@ describe("ReminderScheduler", () => {
                 error,
             );
             // Should NOT complete the reminder when send fails (keeps for retry)
-            expect(mockDatabase.completeReminder).not.toHaveBeenCalled();
+            expect(mockReminderService.completeReminder).not.toHaveBeenCalled();
         });
 
         it("should include referenced message information if available", async () => {
@@ -313,7 +319,9 @@ describe("ReminderScheduler", () => {
 
         it("should handle database deletion errors", async () => {
             const deleteError = new Error("Delete failed");
-            mockDatabase.completeReminder.mockRejectedValue(deleteError);
+            mockReminderService.completeReminder.mockImplementation(() => {
+                throw deleteError;
+            });
 
             const reminder = {
                 id: 1,

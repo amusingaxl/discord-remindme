@@ -1,9 +1,9 @@
 import { TimeParser } from "./timeParser.js";
 
 class ReminderScheduler {
-    constructor(client, database) {
+    constructor(client, reminderService) {
         this.client = client;
-        this.database = database;
+        this.reminderService = reminderService;
         this.checkInterval = null;
     }
 
@@ -26,7 +26,7 @@ class ReminderScheduler {
 
     async checkReminders() {
         try {
-            const activeReminders = await this.database.getActiveReminders();
+            const activeReminders = this.reminderService.getActiveReminders();
             console.log(
                 `🔍 Checking reminders... Found ${activeReminders.length} due reminders`,
             );
@@ -124,7 +124,7 @@ class ReminderScheduler {
                             `💬 Sent reminder with clickable embed for message ${reminder.referenced_message_id} in channel ${channel.name} for user ${targetUserId}`,
                         );
 
-                        await this.database.completeReminder(reminder.id);
+                        this.reminderService.completeReminder(reminder.id);
                         console.log(
                             `✅ Reminder ${reminder.id} sent and deleted for user ${targetUserId}`,
                         );
@@ -162,7 +162,7 @@ class ReminderScheduler {
                         );
 
                         await channel.send(messageOptions);
-                        await this.database.completeReminder(reminder.id);
+                        this.reminderService.completeReminder(reminder.id);
                         console.log(
                             `✅ Reminder ${reminder.id} sent and deleted for user ${targetUserId}`,
                         );
@@ -187,7 +187,7 @@ class ReminderScheduler {
             );
             await channel.send(messageOptions);
 
-            await this.database.completeReminder(reminder.id);
+            await this.reminderService.completeReminder(reminder.id);
             console.log(
                 `✅ Reminder ${reminder.id} sent and deleted for user ${targetUserId}`,
             );
@@ -215,18 +215,10 @@ class ReminderScheduler {
 
     async getUpcomingReminders(limit = 10) {
         try {
-            const reminders = await this.database.db.all(
-                `
-                SELECT r.*, u.timezone 
-                FROM reminders r 
-                LEFT JOIN users u ON r.user_id = u.discord_id 
-                WHERE r.scheduled_time > datetime('now')
-                ORDER BY r.scheduled_time ASC 
-                LIMIT ?
-            `,
-                [limit],
+            const reminders = this.reminderService.getUpcomingReminders(
+                null,
+                limit,
             );
-
             return reminders.map((reminder) => ({
                 ...reminder,
                 formatted_time: TimeParser.formatReminderTime(

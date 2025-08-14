@@ -22,20 +22,15 @@ export default {
                 .setRequired(false),
         ),
 
-    async execute(interaction, database) {
+    async execute(interaction, { userService, reminderService }) {
         const action = interaction.options.getString("action") || "list";
         const reminderId = interaction.options.getInteger("id");
 
         try {
             // Get user record (create if doesn't exist)
-            let userRecord = await database.getUser(interaction.user.id);
-            if (!userRecord) {
-                database.createUser(interaction.user.id).catch(() => {}); // Async, don't wait
-                userRecord = {
-                    discord_id: interaction.user.id,
-                    timezone: "UTC",
-                };
-            }
+            const userRecord = await userService.ensureUser(
+                interaction.user.id,
+            );
 
             if (action === "delete") {
                 if (!reminderId) {
@@ -52,7 +47,7 @@ export default {
                     });
                 }
 
-                const deleted = await database.deleteReminder(
+                const deleted = await reminderService.deleteReminder(
                     reminderId,
                     interaction.user.id,
                 );
@@ -82,7 +77,7 @@ export default {
                 });
             }
 
-            const reminders = await database.getUserReminders(
+            const reminders = reminderService.getUserReminders(
                 interaction.user.id,
                 false, // Only get active reminders
             );

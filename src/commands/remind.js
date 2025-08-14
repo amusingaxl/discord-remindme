@@ -36,7 +36,7 @@ export default {
                 .setRequired(false),
         ),
 
-    async execute(interaction, database) {
+    async execute(interaction, { userService, reminderService }) {
         const timeString = interaction.options.getString("time");
         const message = interaction.options.getString("message");
         const messageLink = interaction.options.getString("message_link");
@@ -118,8 +118,9 @@ export default {
 
         try {
             // Get user's timezone preference
-            const user = await database.getUser(interaction.user.id);
-            const userTimezone = user?.timezone || "UTC";
+            const userTimezone = userService.getUserTimezone(
+                interaction.user.id,
+            );
 
             // Parse time with user's timezone
             const parsedTime = TimeParser.parseTimeString(
@@ -134,23 +135,17 @@ export default {
             }
 
             // Create reminder with user's timezone
-            await database.createReminder(
-                interaction.user.id,
-                isRemindingOther ? targetUser.id : null,
-                interaction.guild?.id || null,
-                interaction.channelId,
-                finalMessage,
-                parsedTime.date.toISOString(),
-                userTimezone,
-                referencedMessageId,
-                referencedMessageUrl,
-            );
-
-            // Create users if they don't exist (async, don't wait)
-            database.createUser(interaction.user.id).catch(() => {}); // Ignore if exists
-            if (isRemindingOther) {
-                database.createUser(targetUser.id).catch(() => {}); // Ignore if exists
-            }
+            await reminderService.createReminder({
+                userId: interaction.user.id,
+                targetUserId: isRemindingOther ? targetUser.id : null,
+                guildId: interaction.guild?.id || null,
+                channelId: interaction.channelId,
+                message: finalMessage,
+                scheduledTime: parsedTime.date.toISOString(),
+                timezone: userTimezone,
+                referencedMessageId: referencedMessageId,
+                referencedMessageUrl: referencedMessageUrl,
+            });
 
             const timeFormatted = TimeParser.formatReminderTime(
                 parsedTime.date,

@@ -16,7 +16,10 @@ export default {
                 .setAutocomplete(true),
         ),
 
-    async autocomplete(interaction, _database) {
+    async autocomplete(
+        interaction,
+        { userService: _userService, reminderService: _reminderService },
+    ) {
         const focusedValue = interaction.options.getFocused().toLowerCase();
         const timezones = TimeParser.getSupportedTimezones();
 
@@ -29,7 +32,10 @@ export default {
         );
     },
 
-    async execute(interaction, database) {
+    async execute(
+        interaction,
+        { userService, reminderService: _reminderService },
+    ) {
         const newTimezone = interaction.options.getString("timezone");
 
         try {
@@ -56,17 +62,10 @@ export default {
             }
 
             // Get or create user record quickly
-            let userRecord = await database.getUser(interaction.user.id);
-            if (!userRecord) {
-                await database.createUser(
-                    interaction.user.id,
-                    newTimezone || "UTC",
-                );
-                userRecord = {
-                    discord_id: interaction.user.id,
-                    timezone: newTimezone || "UTC",
-                };
-            }
+            const userRecord = await userService.ensureUser(
+                interaction.user.id,
+                newTimezone || "UTC",
+            );
 
             if (!newTimezone) {
                 const currentTime = DateTime.now()
@@ -101,7 +100,7 @@ export default {
                 });
             }
 
-            await database.updateUserTimezone(interaction.user.id, newTimezone);
+            userService.updateUserTimezone(interaction.user.id, newTimezone);
 
             const newTime = DateTime.now()
                 .setZone(newTimezone)

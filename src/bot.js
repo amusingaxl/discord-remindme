@@ -1,5 +1,5 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+// import path from "node:path";
+// import { fileURLToPath } from "node:url";
 import {
     Client,
     GatewayIntentBits,
@@ -10,6 +10,8 @@ import dotenv from "dotenv";
 import { ReminderScheduler } from "./utils/scheduler.js";
 import { TimeParser } from "./utils/timeParser.js";
 import { Database } from "./database/database.js";
+import { UserService } from "./services/userService.js";
+import { ReminderService } from "./services/reminderService.js";
 
 // Import all commands
 import remindCommand from "./commands/remind.js";
@@ -19,14 +21,18 @@ import helpCommand from "./commands/help.js";
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
 
 // Initialize database with path from environment variable
 if (!process.env.DATABASE_PATH) {
     throw new Error("DATABASE_PATH environment variable is required");
 }
 const database = new Database(process.env.DATABASE_PATH);
+
+// Initialize services
+const userService = new UserService(database);
+const reminderService = new ReminderService(database, userService);
 
 const client = new Client({
     intents: [
@@ -63,8 +69,8 @@ console.log(
     Array.from(client.commands.keys()),
 );
 
-// Initialize scheduler with database
-const scheduler = new ReminderScheduler(client, database);
+// Initialize scheduler with services
+const scheduler = new ReminderScheduler(client, reminderService);
 
 client.once("ready", () => {
     console.log(`✅ Bot is ready! Logged in as ${client.user.tag}`);
@@ -188,8 +194,7 @@ async function handleRemindCommand(message) {
 
     try {
         // Get user's timezone
-        const user = await database.getUser(message.author.id);
-        const userTimezone = user?.timezone || "UTC";
+        const userTimezone = userService.getUserTimezone(message.author.id);
 
         // Parse time
         const parsedTime = TimeParser.parseTimeString(timeString, userTimezone);
@@ -204,23 +209,17 @@ async function handleRemindCommand(message) {
         // Create reminder
         const isRemindingOther =
             targetUser && targetUser.id !== message.author.id;
-        await database.createReminder(
-            message.author.id,
-            isRemindingOther ? targetUser.id : null,
-            message.guild?.id || null,
-            message.channelId,
-            finalMessage,
-            parsedTime.date.toISOString(),
-            userTimezone,
-            referencedMessageId,
-            referencedMessageUrl,
-        );
-
-        // Create users if they don't exist
-        database.createUser(message.author.id).catch(() => {});
-        if (isRemindingOther) {
-            database.createUser(targetUser.id).catch(() => {});
-        }
+        await reminderService.createReminder({
+            userId: message.author.id,
+            targetUserId: isRemindingOther ? targetUser.id : null,
+            guildId: message.guild?.id || null,
+            channelId: message.channelId,
+            message: finalMessage,
+            scheduledTime: parsedTime.date.toISOString(),
+            timezone: userTimezone,
+            referencedMessageId: referencedMessageId,
+            referencedMessageUrl: referencedMessageUrl,
+        });
 
         const timeFormatted = TimeParser.formatReminderTime(
             parsedTime.date,
@@ -273,7 +272,10 @@ client.on("interactionCreate", async (interaction) => {
         }
 
         try {
-            await command.execute(interaction, database);
+            await command.execute(interaction, {
+                userService,
+                reminderService,
+            });
         } catch (error) {
             console.error("Error executing command:", error);
 
@@ -301,7 +303,10 @@ client.on("interactionCreate", async (interaction) => {
         }
 
         try {
-            await command.execute(interaction, database);
+            await command.execute(interaction, {
+                userService,
+                reminderService,
+            });
         } catch (error) {
             console.error("Error executing context menu command:", error);
 
@@ -326,13 +331,19 @@ client.on("interactionCreate", async (interaction) => {
         if (!command || !command.autocomplete) return;
 
         try {
-            await command.autocomplete(interaction, database);
+            await command.autocomplete(interaction, {
+                userService,
+                reminderService,
+            });
         } catch (error) {
             console.error("Error handling autocomplete:", error);
         }
     } else if (interaction.isModalSubmit()) {
         try {
-            await handleModalSubmit(interaction, database);
+            await handleModalSubmit(interaction, {
+                userService,
+                reminderService,
+            });
         } catch (error) {
             console.error("Error handling modal submit:", error);
             if (!interaction.replied && !interaction.deferred) {
@@ -354,7 +365,10 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 // Handle modal submissions for message reminders
-async function handleModalSubmit(interaction, database) {
+async function handleModalSubmit(
+    interaction,
+    { userService, reminderService },
+) {
     if (interaction.customId.startsWith("remind_modal_")) {
         const messageId = interaction.customId.replace("remind_modal_", "");
         const timeString =
@@ -380,8 +394,9 @@ async function handleModalSubmit(interaction, database) {
 
         try {
             // Get user's timezone preference
-            const user = await database.getUser(interaction.user.id);
-            const userTimezone = user?.timezone || "UTC";
+            const userTimezone = userService.getUserTimezone(
+                interaction.user.id,
+            );
 
             // Parse time with user's timezone
             const parsedTime = TimeParser.parseTimeString(
@@ -418,20 +433,17 @@ async function handleModalSubmit(interaction, database) {
             const messageUrl = `https://discord.com/channels/${interaction.guild?.id || "@me"}/${originalMessage.channel.id}/${originalMessage.id}`;
 
             // Create reminder with message reference
-            const reminderId = await database.createReminder(
-                interaction.user.id,
-                null, // Self reminder only for now
-                interaction.guild?.id || null,
-                interaction.channelId,
-                reminderMessage,
-                parsedTime.date.toISOString(),
-                userTimezone,
-                originalMessage.id,
-                messageUrl,
-            );
-
-            // Create users if they don't exist (async, don't wait)
-            database.createUser(interaction.user.id).catch(() => {});
+            const reminderId = await reminderService.createReminder({
+                userId: interaction.user.id,
+                targetUserId: null, // Self reminder only for now
+                guildId: interaction.guild?.id || null,
+                channelId: interaction.channelId,
+                message: reminderMessage,
+                scheduledTime: parsedTime.date.toISOString(),
+                timezone: userTimezone,
+                referencedMessageId: originalMessage.id,
+                referencedMessageUrl: messageUrl,
+            });
 
             const timeFormatted = TimeParser.formatReminderTime(
                 parsedTime.date,

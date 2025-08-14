@@ -37,25 +37,3 @@ export const DISCORD_ERRORS = {
     UNKNOWN_MESSAGE: 10008,
     INVALID_TOKEN: 401,
 };
-
-export const MESSAGES = {
-    ERRORS: {
-        INVALID_TIME:
-            '❌ Invalid time format. Try: "in 1 hour", "tomorrow at 3pm", etc.',
-        INVALID_MESSAGE_LINK:
-            '❌ Invalid Discord message link. Please copy the link by right-clicking a message and selecting "Copy Message Link".',
-        MESSAGE_NOT_FOUND:
-            "❌ Could not access the referenced message. Make sure the bot has permission to view that channel and the message exists.",
-        REMINDER_CREATION_FAILED:
-            "❌ Error creating reminder. Please try again.",
-        COMMAND_ERROR:
-            "❌ There was an error processing your command. Please try again.",
-        RATE_LIMITED:
-            "❌ You're sending commands too quickly. Please wait a moment.",
-    },
-    SUCCESS: {
-        REMINDER_SET: "⏰ Reminder set",
-        REMINDER_DELETED: "✅ Reminder deleted",
-        TIMEZONE_UPDATED: "✅ Timezone updated",
-    },
-};

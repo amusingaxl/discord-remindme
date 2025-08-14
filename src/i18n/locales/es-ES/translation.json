@@ -1,0 +1,154 @@
+{
+  "errors": {
+    "invalidLanguage": "❌ Idioma Inválido",
+    "invalidLanguageValue": "\"{{language}}\" no es un idioma válido.",
+    "invalidTime": "❌ Formato de tiempo inválido. Prueba: \"en 1 hora\", \"mañana a las 3pm\", etc.",
+    "invalidMessageLink": "❌ Enlace de mensaje de Discord inválido. Por favor, copia el enlace haciendo clic derecho en un mensaje y seleccionando \"Copiar enlace del mensaje\".",
+    "messageNotFound": "❌ No se pudo acceder al mensaje referenciado. Asegúrate de que el bot tenga permiso para ver ese canal y que el mensaje exista.",
+    "reminderCreationFailed": "❌ Error al crear el recordatorio. Por favor, inténtalo de nuevo.",
+    "commandError": "❌ Hubo un error al procesar tu comando. Por favor, inténtalo de nuevo.",
+    "rateLimited": "❌ Estás enviando comandos demasiado rápido. Por favor, espera un momento.",
+    "provideTime": "❌ Por favor proporciona un tiempo. Uso: `!remind \"en 1 hora\" mensaje` o `!remind @usuario \"en 1 hora\" mensaje`",
+    "unclosedQuote": "❌ Comilla sin cerrar. Usa: `!remind \"en 1 hora\" mensaje` o `!remind @usuario \"en 1 hora\" mensaje`",
+    "provideMessage": "❌ Por favor proporciona un mensaje o responde a un mensaje.",
+    "provideMessageOrLink": "❌ Por favor proporciona un mensaje o un enlace de mensaje.",
+    "provideMessageOrLinkDetailed": "❌ **Por favor proporciona un mensaje o un enlace de mensaje.**\n\n💡 **Opciones:**\n• Proporciona `mensaje` para un recordatorio general\n• Proporciona `enlace_mensaje` para referenciar un mensaje específico (clic derecho en el mensaje → Copiar enlace del mensaje)\n• Usa `!remind \"tiempo\"` al responder a un mensaje para detección automática",
+    "missingReminderId": "❌ ID de Recordatorio Faltante",
+    "provideReminderId": "Por favor proporciona un ID de recordatorio para eliminar.\nUsa `/reminders list` para ver tus IDs de recordatorios.",
+    "reminderNotFound": "❌ Recordatorio No Encontrado",
+    "reminderNotFoundOrNoPermission": "El recordatorio con ID {{reminderId}} no fue encontrado o no tienes permiso para eliminarlo.",
+    "invalidTimezone": "❌ Zona Horaria Inválida",
+    "invalidTimezoneValue": "\"{{timezone}}\" no es una zona horaria válida.",
+    "generalError": "❌ Error",
+    "genericErrorMessage": "Lo siento, hubo un error {{action}}. Por favor, inténtalo de nuevo.",
+    "executionError": "¡Hubo un error al ejecutar este comando! Por favor, inténtalo de nuevo.",
+    "processingError": "Hubo un error al procesar tu recordatorio. Por favor, inténtalo de nuevo.",
+    "originalMessageNotFound": "No se pudo encontrar el mensaje original. Puede haber sido eliminado.",
+    "invalidTimeFormat": "❌ Formato de Tiempo Inválido",
+    "cantUnderstandTimeFormat": "No pude entender ese formato de tiempo. Aquí hay algunos ejemplos:"
+  },
+  "success": {
+    "reminderSet": "⏰ Recordatorio establecido",
+    "reminderSetFor": "⏰ Recordatorio establecido{{targetText}} para {{time}}",
+    "reminderDeleted": "✅ Recordatorio eliminado",
+    "timezoneUpdated": "✅ Zona horaria actualizada",
+    "languageUpdatedTitle": "✅ Idioma Actualizado",
+    "reminderDeletedWithId": "✅ Recordatorio Eliminado",
+    "reminderDeletedMessage": "El recordatorio {{reminderId}} ha sido eliminado.",
+    "timezoneUpdatedTitle": "✅ Zona Horaria Actualizada",
+    "messageReminderCreated": "✅ Recordatorio de Mensaje Creado",
+    "processing": "⏳ Procesando..."
+  },
+  "commands": {
+    "help": {
+      "description": "Obtén ayuda para usar el bot de recordatorios",
+      "title": "🤖 Ayuda del Bot de Recordatorios",
+      "intro": "¡Puedo ayudarte a crear y gestionar recordatorios para ti y otros!",
+      "commandsTitle": "📝 Comandos",
+      "commands": {
+        "remind": "`/remind <tiempo> <mensaje> [usuario]` - Crear un recordatorio",
+        "reminders": "`/reminders [acción] [id]` - Ver/gestionar tus recordatorios",
+        "timezone": "`/timezone [zona_horaria]` - Establecer o ver tu zona horaria",
+        "help": "`/help` - Mostrar este mensaje de ayuda"
+      },
+      "timeExamplesTitle": "⏰ Ejemplos de Tiempo",
+      "timezoneTitle": "🌍 Soporte de Zona Horaria",
+      "timezoneSupport": {
+        "line1": "Establece tu zona horaria con `/timezone` para mejor análisis del tiempo.",
+        "line2": "Soportadas: UTC, America/New_York, Europe/London, Asia/Tokyo, etc.",
+        "line3": "Todos los recordatorios se procesan en UTC pero se muestran en tu zona horaria."
+      },
+      "remindingOthersTitle": "👥 Recordar a Otros",
+      "remindingOthers": {
+        "line1": "Usa `/remind <tiempo> <mensaje> @usuario` para recordar a otra persona.",
+        "line2": "Recibirán una notificación cuando se active el recordatorio.",
+        "line3": "Ambos pueden ver el recordatorio en `/reminders`."
+      },
+      "managingRemindersTitle": "🗂️ Gestionar Recordatorios",
+      "managingReminders": {
+        "view": "`/reminders` - Ver tus recordatorios activos",
+        "delete": "`/reminders delete <id>` - Eliminar un recordatorio específico"
+      },
+      "footer": "¿Necesitas más ayuda? ¡Pregunta a un humano!"
+    },
+    "remind": {
+      "description": "Crear un recordatorio para ti o alguien más",
+      "options": {
+        "time": "Cuándo recordar (ej., \"en 2 horas\", \"mañana a las 3pm\")",
+        "message": "Qué recordar (puede usarse con enlace_mensaje para contexto adicional)",
+        "messageLink": "Enlace de mensaje de Discord para referenciar (clic derecho en mensaje → Copiar enlace del mensaje)",
+        "user": "Usuario a recordar (por defecto eres tú)"
+      }
+    },
+    "reminders": {
+      "description": "Ver y gestionar tus recordatorios",
+      "options": {
+        "action": "Acción a realizar",
+        "id": "ID del recordatorio (para acción de eliminar)"
+      },
+      "actions": {
+        "list": "Listar recordatorios activos",
+        "delete": "Eliminar un recordatorio"
+      },
+      "noRemindersTitle": "📭 Sin Recordatorios",
+      "noRemindersMessage": "No tienes recordatorios activos.\n\n¡Usa `/remind` para crear un nuevo recordatorio!",
+      "activeRemindersTitle": "📋 Tus Recordatorios Activos",
+      "tipTitle": "💡 Consejo",
+      "tipMessage": "Usa `/reminders delete <id>` para eliminar un recordatorio",
+      "showingLimited": "Mostrando {{shown}} de {{total}} recordatorios"
+    },
+    "timezone": {
+      "description": "Establecer o ver tu zona horaria para recordatorios",
+      "options": {
+        "timezone": "Tu zona horaria (ej., America/New_York, Europe/London, UTC)"
+      },
+      "currentTimezoneTitle": "🌍 Tu Zona Horaria Actual",
+      "timezoneField": "Zona Horaria",
+      "currentTimeField": "Hora Actual",
+      "changeInstruction": "Usa `/timezone <zona_horaria>` para cambiar tu zona horaria.",
+      "commonTimezonesFooter": "Zonas horarias comunes: UTC, America/New_York, Europe/London, Asia/Tokyo",
+      "commonTimezonesTitle": "Zonas horarias comunes:",
+      "useAutocompleteFooter": "Usa el autocompletado de zona horaria o visita: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones",
+      "newTimezoneField": "Nueva Zona Horaria",
+      "updateDescription": "¡Tu zona horaria ha sido actualizada! Todos los futuros recordatorios usarán esta zona horaria para analizar los tiempos."
+    },
+    "language": {
+      "description": "Establecer o ver tu idioma preferido para los mensajes del bot",
+      "options": {
+        "language": "Tu idioma preferido (ej., en, es, fr, de, pt, ja)"
+      },
+      "currentLanguageTitle": "🌐 Tu Idioma Actual",
+      "languageField": "Idioma",
+      "changeInstruction": "Usa `/language <idioma>` para cambiar tu idioma preferido.",
+      "availableLanguagesFooter": "Disponibles: English, Español",
+      "availableLanguagesTitle": "Idiomas disponibles:",
+      "newLanguageField": "Nuevo Idioma",
+      "updateDescription": "¡Tu preferencia de idioma ha sido actualizada! Todos los mensajes del bot ahora aparecerán en tu idioma elegido."
+    }
+  },
+  "timeExamples": {
+    "relative": "• **Tiempos relativos:** \"en 2 horas\", \"en 30 minutos\", \"en 1 día\"",
+    "specific": "• **Tiempos específicos:** \"mañana a las 3pm\", \"el próximo viernes a las 9am\"",
+    "dates": "• **Fechas:** \"15 de enero a las 2pm\", \"2025-03-20 14:30\"",
+    "natural": "• **Lenguaje natural:** \"esta noche\", \"esta tarde\", \"la próxima semana\""
+  },
+  "reminder": {
+    "notification": "🔔 **Recordatorio** <@{{userId}}>: {{message}}",
+    "notificationNoMessage": "🔔 **Recordatorio** <@{{userId}}>",
+    "fromUser": "👤 De: <@{{userId}}>",
+    "referencedMessage": "Mensaje referenciado",
+    "messageFrom": "Mensaje de {{username}}: {{content}}",
+    "attachmentPlaceholder": "[Adjunto/Embed]",
+    "attachmentMedia": "*Adjunto/Media*",
+    "jumpToMessage": "[Ir al mensaje →]({{url}})",
+    "aboutMessage": "Te recordaré sobre este mensaje: **{{preview}}{{ellipsis}}**"
+  },
+  "fields": {
+    "when": "⏰ Cuándo",
+    "id": "🆔 ID",
+    "originalMessage": "🔗 Mensaje Original",
+    "validFormats": "Formatos válidos:",
+    "tryAgain": "Intenta de nuevo con un formato de tiempo diferente",
+    "reminderLinkFooter": "El recordatorio incluirá un enlace de vuelta a este mensaje"
+  }
+}

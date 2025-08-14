@@ -1,63 +1,63 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { TimeParser } from "../utils/timeParser.js";
+import { CONFIG } from "../constants/config.js";
+import { t, getCommandLocalizations } from "../i18n/i18n.js";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("help")
-        .setDescription("Get help with using the reminder bot"),
+        .setDescription(t("commands.help.description"))
+        .setDescriptionLocalizations(getCommandLocalizations("commands.help.description")),
 
-    async execute(interaction) {
+    async execute(interaction, { timeParser }) {
         // Help command is simple, respond immediately
         const embed = new EmbedBuilder()
-            .setColor("#0099ff")
-            .setTitle("🤖 Reminder Bot Help")
-            .setDescription(
-                "I can help you create and manage reminders for yourself and others!",
-            )
+            .setColor(CONFIG.COLORS.INFO)
+            .setTitle(t("commands.help.title"))
+            .setDescription(t("commands.help.intro"))
             .addFields(
                 {
-                    name: "📝 Commands",
+                    name: t("commands.help.commandsTitle"),
                     value: [
-                        "`/remind <time> <message> [user]` - Create a reminder",
-                        "`/reminders [action] [id]` - View/manage your reminders",
-                        "`/timezone [timezone]` - Set or view your timezone",
-                        "`/help` - Show this help message",
+                        t("commands.help.commands.remind"),
+                        t("commands.help.commands.reminders"),
+                        t("commands.help.commands.timezone"),
+                        t("commands.help.commands.help"),
                     ].join("\n"),
                     inline: false,
                 },
                 {
-                    name: "⏰ Time Examples",
-                    value: TimeParser.getTimeExamples().join("\n"),
+                    name: t("commands.help.timeExamplesTitle"),
+                    value: timeParser.getTimeExamples().join("\n"),
                     inline: false,
                 },
                 {
-                    name: "🌍 Timezone Support",
+                    name: t("commands.help.timezoneTitle"),
                     value: [
-                        "Set your timezone with `/timezone` for better time parsing.",
-                        "Supported: UTC, America/New_York, Europe/London, Asia/Tokyo, etc.",
-                        "All reminders are processed in UTC but displayed in your timezone.",
+                        t("commands.help.timezoneSupport.line1"),
+                        t("commands.help.timezoneSupport.line2"),
+                        t("commands.help.timezoneSupport.line3"),
                     ].join("\n"),
                     inline: false,
                 },
                 {
-                    name: "👥 Reminding Others",
+                    name: t("commands.help.remindingOthersTitle"),
                     value: [
-                        "Use `/remind <time> <message> @user` to remind someone else.",
-                        "They'll get notified when the reminder triggers.",
-                        "Both you and they can see the reminder in `/reminders`.",
+                        t("commands.help.remindingOthers.line1"),
+                        t("commands.help.remindingOthers.line2"),
+                        t("commands.help.remindingOthers.line3"),
                     ].join("\n"),
                     inline: false,
                 },
                 {
-                    name: "🗂️ Managing Reminders",
+                    name: t("commands.help.managingRemindersTitle"),
                     value: [
-                        "`/reminders` - View your active reminders",
-                        "`/reminders delete <id>` - Delete a specific reminder",
+                        t("commands.help.managingReminders.view"),
+                        t("commands.help.managingReminders.delete"),
                     ].join("\n"),
                     inline: false,
                 },
             )
-            .setFooter({ text: "Need more help? Ask a human!" });
+            .setFooter({ text: t("commands.help.footer") });
 
         await interaction.reply({ embeds: [embed], ephemeral: true });
     },

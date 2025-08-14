@@ -1,17 +1,19 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { DateTime } from "luxon";
+import { CONFIG } from "../constants/config.js";
 import { TimeParser } from "../utils/timeParser.js";
+import { t, getCommandLocalizations } from "../i18n/i18n.js";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("timezone")
-        .setDescription("Set or view your timezone for reminders")
+        .setDescription(t("commands.timezone.description"))
+        .setDescriptionLocalizations(getCommandLocalizations("commands.timezone.description"))
         .addStringOption((option) =>
             option
                 .setName("timezone")
-                .setDescription(
-                    "Your timezone (e.g., America/New_York, Europe/London, UTC)",
-                )
+                .setDescription(t("commands.timezone.options.timezone"))
+                .setDescriptionLocalizations(getCommandLocalizations("commands.timezone.options.timezone"))
                 .setRequired(false)
                 .setAutocomplete(true),
         ),
@@ -22,11 +24,9 @@ export default {
 
         const filtered = timezones
             .filter((tz) => tz.toLowerCase().includes(focusedValue))
-            .slice(0, 25);
+            .slice(0, CONFIG.TIMEZONES.AUTOCOMPLETE_LIMIT);
 
-        await interaction.respond(
-            filtered.map((tz) => ({ name: tz, value: tz })),
-        );
+        await interaction.respond(filtered.map((tz) => ({ name: tz, value: tz })));
     },
 
     async execute(interaction, { userService }) {
@@ -36,17 +36,15 @@ export default {
             // For timezone validation, we can respond quickly
             if (newTimezone && !TimeParser.validateTimezone(newTimezone)) {
                 const embed = new EmbedBuilder()
-                    .setColor("#ff4444")
-                    .setTitle("❌ Invalid Timezone")
-                    .setDescription(`"${newTimezone}" is not a valid timezone.`)
+                    .setColor(CONFIG.COLORS.ERROR)
+                    .setTitle(t("errors.invalidTimezone"))
+                    .setDescription(t("errors.invalidTimezoneValue", { timezone: newTimezone }))
                     .addFields({
-                        name: "Common timezones:",
-                        value: TimeParser.getSupportedTimezones()
-                            .slice(0, 8)
-                            .join("\n"),
+                        name: t("commands.timezone.commonTimezonesTitle"),
+                        value: TimeParser.getSupportedTimezones().slice(0, 8).join("\n"),
                     })
                     .setFooter({
-                        text: "Use timezone autocomplete or visit: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones",
+                        text: t("commands.timezone.useAutocompleteFooter"),
                     });
 
                 return await interaction.reply({
@@ -56,36 +54,29 @@ export default {
             }
 
             // Get or create user record quickly
-            const userRecord = await userService.ensureUser(
-                interaction.user.id,
-                newTimezone || "UTC",
-            );
+            const userRecord = await userService.ensureUser(interaction.user.id, newTimezone ?? "UTC");
 
             if (!newTimezone) {
-                const currentTime = DateTime.now()
-                    .setZone(userRecord.timezone)
-                    .toFormat("yyyy-MM-dd HH:mm:ss ZZZZ");
+                const currentTime = DateTime.now().setZone(userRecord.timezone).toFormat("yyyy-MM-dd HH:mm:ss ZZZZ");
 
                 const embed = new EmbedBuilder()
-                    .setColor("#0099ff")
-                    .setTitle("🌍 Your Current Timezone")
+                    .setColor(CONFIG.COLORS.INFO)
+                    .setTitle(t("commands.timezone.currentTimezoneTitle"))
                     .addFields(
                         {
-                            name: "Timezone",
+                            name: t("commands.timezone.timezoneField"),
                             value: userRecord.timezone,
                             inline: true,
                         },
                         {
-                            name: "Current Time",
+                            name: t("commands.timezone.currentTimeField"),
                             value: currentTime,
                             inline: true,
                         },
                     )
-                    .setDescription(
-                        "Use `/timezone <timezone>` to change your timezone.",
-                    )
+                    .setDescription(t("commands.timezone.changeInstruction"))
                     .setFooter({
-                        text: "Common timezones: UTC, America/New_York, Europe/London, Asia/Tokyo",
+                        text: t("commands.timezone.commonTimezonesFooter"),
                     });
 
                 return await interaction.reply({
@@ -96,30 +87,36 @@ export default {
 
             userService.updateUserTimezone(interaction.user.id, newTimezone);
 
-            const newTime = DateTime.now()
-                .setZone(newTimezone)
-                .toFormat("yyyy-MM-dd HH:mm:ss ZZZZ");
+            const newTime = DateTime.now().setZone(newTimezone).toFormat("yyyy-MM-dd HH:mm:ss ZZZZ");
 
             const embed = new EmbedBuilder()
-                .setColor("#00ff88")
-                .setTitle("✅ Timezone Updated")
+                .setColor(CONFIG.COLORS.SUCCESS)
+                .setTitle(t("success.timezoneUpdatedTitle"))
                 .addFields(
-                    { name: "New Timezone", value: newTimezone, inline: true },
-                    { name: "Current Time", value: newTime, inline: true },
+                    {
+                        name: t("commands.timezone.newTimezoneField"),
+                        value: newTimezone,
+                        inline: true,
+                    },
+                    {
+                        name: t("commands.timezone.currentTimeField"),
+                        value: newTime,
+                        inline: true,
+                    },
                 )
-                .setDescription(
-                    "Your timezone has been updated! All future reminders will use this timezone for parsing times.",
-                );
+                .setDescription(t("commands.timezone.updateDescription"));
 
             await interaction.reply({ embeds: [embed], ephemeral: true });
         } catch (error) {
             console.error("Error updating timezone:", error);
 
             const embed = new EmbedBuilder()
-                .setColor("#ff4444")
-                .setTitle("❌ Error")
+                .setColor(CONFIG.COLORS.ERROR)
+                .setTitle(t("errors.generalError"))
                 .setDescription(
-                    "Sorry, there was an error updating your timezone. Please try again.",
+                    t("errors.genericErrorMessage", {
+                        action: "updating your timezone",
+                    }),
                 );
 
             await interaction.reply({ embeds: [embed], ephemeral: true });

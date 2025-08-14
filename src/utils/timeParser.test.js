@@ -3,6 +3,77 @@ import { DateTime } from "luxon";
 import { TimeParser } from "./timeParser.js";
 
 describe("TimeParser", () => {
+    // Create instance for testing
+    const timeParser = new TimeParser("en");
+
+    describe("constructor and language support", () => {
+        it("should create instance with English parser by default", () => {
+            const parser = new TimeParser();
+            expect(parser.language).toBe("en");
+        });
+
+        it("should create instance with English parser when specified", () => {
+            const parser = new TimeParser("en");
+            expect(parser.language).toBe("en");
+        });
+
+        it("should create instance with Spanish parser when specified", () => {
+            const parser = new TimeParser("es");
+            expect(parser.language).toBe("es");
+        });
+
+        it("should default to English for unknown languages", () => {
+            const parser = new TimeParser("fr");
+            expect(parser.language).toBe("fr");
+            // Parser should still work (defaults to English)
+            const result = parser.parseTimeString("tomorrow", "UTC");
+            expect(result).toBeTruthy();
+        });
+    });
+
+    describe("i18n time parsing", () => {
+        beforeAll(() => {
+            jest.useFakeTimers();
+            jest.setSystemTime(new Date("2025-01-15T10:00:00Z"));
+        });
+
+        afterAll(() => {
+            jest.useRealTimers();
+        });
+
+        it("should parse English time strings with English parser", () => {
+            const enParser = new TimeParser("en");
+            const result = enParser.parseTimeString("tomorrow at 3pm", "UTC");
+            expect(result).toBeTruthy();
+            expect(result.isValid).toBe(true);
+        });
+
+        it("should parse Spanish time strings with Spanish parser", () => {
+            const esParser = new TimeParser("es");
+            const result = esParser.parseTimeString("mañana a las 3pm", "UTC");
+            expect(result).toBeTruthy();
+            expect(result.isValid).toBe(true);
+        });
+
+        it("should parse 'en 2 horas' with Spanish parser", () => {
+            const esParser = new TimeParser("es");
+            const result = esParser.parseTimeString("en 2 horas", "UTC");
+            expect(result).toBeTruthy();
+            expect(result.isValid).toBe(true);
+
+            const expectedTime = DateTime.now().setZone("UTC").plus({ hours: 2 });
+            const parsedTime = DateTime.fromJSDate(result.date);
+            expect(Math.abs(parsedTime.toMillis() - expectedTime.toMillis())).toBeLessThan(60000);
+        });
+
+        it("should parse 'próximo lunes' with Spanish parser", () => {
+            const esParser = new TimeParser("es");
+            const result = esParser.parseTimeString("próximo lunes", "UTC");
+            expect(result).toBeTruthy();
+            expect(result.isValid).toBe(true);
+        });
+    });
+
     describe("parseTimeString", () => {
         const mockNow = DateTime.fromISO("2025-01-15T10:00:00", {
             zone: "UTC",
@@ -18,20 +89,18 @@ describe("TimeParser", () => {
         });
 
         it("should parse relative time strings", () => {
-            const result = TimeParser.parseTimeString("in 2 hours", "UTC");
+            const result = timeParser.parseTimeString("in 2 hours", "UTC");
             expect(result).toBeTruthy();
             expect(result.isValid).toBe(true);
             expect(result.date).toBeInstanceOf(Date);
 
             const expectedTime = mockNow.plus({ hours: 2 });
             const parsedTime = DateTime.fromJSDate(result.date);
-            expect(
-                Math.abs(parsedTime.toMillis() - expectedTime.toMillis()),
-            ).toBeLessThan(60000);
+            expect(Math.abs(parsedTime.toMillis() - expectedTime.toMillis())).toBeLessThan(60000);
         });
 
         it('should parse "tomorrow" correctly', () => {
-            const result = TimeParser.parseTimeString("tomorrow at 3pm", "UTC");
+            const result = timeParser.parseTimeString("tomorrow at 3pm", "UTC");
             expect(result).toBeTruthy();
             expect(result.isValid).toBe(true);
 
@@ -44,37 +113,49 @@ describe("TimeParser", () => {
         });
 
         it("should return null for past times", () => {
-            const result = TimeParser.parseTimeString("yesterday", "UTC");
+            const result = timeParser.parseTimeString("yesterday", "UTC");
             expect(result).toBeNull();
         });
 
         it("should return null for invalid time strings", () => {
-            const result = TimeParser.parseTimeString("gibberish", "UTC");
+            const result = timeParser.parseTimeString("gibberish", "UTC");
             expect(result).toBeNull();
-        });
-    });
-
-    describe("isRelativeTime", () => {
-        it("should identify relative time patterns", () => {
-            expect(TimeParser.isRelativeTime("in 2 hours")).toBe(true);
-            expect(TimeParser.isRelativeTime("in 30 minutes")).toBe(true);
-            expect(TimeParser.isRelativeTime("tomorrow")).toBe(true);
-            expect(TimeParser.isRelativeTime("next week")).toBe(true);
-        });
-
-        it("should not identify absolute times as relative", () => {
-            expect(TimeParser.isRelativeTime("January 15th")).toBe(false);
-            expect(TimeParser.isRelativeTime("2025-03-20")).toBe(false);
-            expect(TimeParser.isRelativeTime("3:30 PM")).toBe(false);
         });
     });
 
     describe("getTimeExamples", () => {
         it("should return an array of example time formats", () => {
-            const examples = TimeParser.getTimeExamples();
+            const examples = timeParser.getTimeExamples();
             expect(Array.isArray(examples)).toBe(true);
             expect(examples.length).toBeGreaterThan(0);
             expect(examples.every((ex) => typeof ex === "string")).toBe(true);
+        });
+
+        it("should use the correct language for examples", () => {
+            const enParser = new TimeParser("en");
+            const esParser = new TimeParser("es");
+
+            const enExamples = enParser.getTimeExamples();
+            const esExamples = esParser.getTimeExamples();
+
+            expect(Array.isArray(enExamples)).toBe(true);
+            expect(Array.isArray(esExamples)).toBe(true);
+            expect(enExamples.length).toBe(esExamples.length);
+        });
+    });
+
+    describe("isRelativeTime", () => {
+        it("should identify relative time patterns", () => {
+            expect(timeParser.isRelativeTime("in 2 hours")).toBe(true);
+            expect(timeParser.isRelativeTime("in 30 minutes")).toBe(true);
+            expect(timeParser.isRelativeTime("tomorrow")).toBe(true);
+            expect(timeParser.isRelativeTime("next week")).toBe(true);
+        });
+
+        it("should not identify absolute times as relative", () => {
+            expect(timeParser.isRelativeTime("January 15th")).toBe(false);
+            expect(timeParser.isRelativeTime("2025-03-20")).toBe(false);
+            expect(timeParser.isRelativeTime("3:30 PM")).toBe(false);
         });
     });
 
@@ -91,7 +172,7 @@ describe("TimeParser", () => {
         });
 
         it("should format time with relative and absolute formats", () => {
-            const result = TimeParser.formatReminderTime(testDate, "UTC");
+            const result = timeParser.formatReminderTime(testDate, "UTC");
             expect(result).toHaveProperty("relative");
             expect(result).toHaveProperty("absolute");
             expect(result).toHaveProperty("timestamp");
@@ -99,10 +180,27 @@ describe("TimeParser", () => {
         });
 
         it("should return timestamp in seconds", () => {
-            const result = TimeParser.formatReminderTime(testDate, "UTC");
-            expect(result.timestamp).toBe(
-                Math.floor(testDate.getTime() / 1000),
-            );
+            const result = timeParser.formatReminderTime(testDate, "UTC");
+            expect(result.timestamp).toBe(Math.floor(testDate.getTime() / 1000));
+        });
+
+        it("should format time with different locales", () => {
+            const enParser = new TimeParser("en");
+            const esParser = new TimeParser("es");
+
+            const enResult = enParser.formatReminderTime(testDate, "UTC");
+            const esResult = esParser.formatReminderTime(testDate, "UTC");
+
+            expect(enResult).toHaveProperty("relative");
+            expect(esResult).toHaveProperty("relative");
+
+            // Both should have the same timestamp regardless of locale
+            expect(enResult.timestamp).toBe(esResult.timestamp);
+
+            // The relative format might differ based on locale
+            // (though in this case "5 days" might be similar)
+            expect(enResult.relative).toBeTruthy();
+            expect(esResult.relative).toBeTruthy();
         });
     });
 

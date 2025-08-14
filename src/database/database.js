@@ -32,7 +32,8 @@ export class Database {
             CREATE TABLE IF NOT EXISTS users (
                 id TEXT PRIMARY KEY,
                 discord_id TEXT UNIQUE NOT NULL,
-                timezone TEXT DEFAULT 'UTC'
+                timezone TEXT DEFAULT 'UTC',
+                language TEXT DEFAULT NULL
             )
         `);
 
@@ -59,6 +60,18 @@ export class Database {
             CREATE INDEX IF NOT EXISTS idx_reminders_user_id ON reminders(user_id);
             CREATE INDEX IF NOT EXISTS idx_users_discord_id ON users(discord_id);
         `);
+
+        // Add language column to existing users table if it doesn't exist
+        try {
+            const columns = this.db.pragma("table_info(users)");
+            const hasLanguage = columns.some((col) => col.name === "language");
+            if (!hasLanguage) {
+                this.db.exec(`ALTER TABLE users ADD COLUMN language TEXT DEFAULT NULL`);
+                console.log("Added language column to users table");
+            }
+        } catch {
+            // Column might already exist, ignore error
+        }
     }
 
     // Get a single row

@@ -1,0 +1,154 @@
+{
+  "errors": {
+    "invalidLanguage": "❌ Invalid Language",
+    "invalidLanguageValue": "\"{{language}}\" is not a valid language.",
+    "invalidTime": "❌ Invalid time format. Try: \"in 1 hour\", \"tomorrow at 3pm\", etc.",
+    "invalidMessageLink": "❌ Invalid Discord message link. Please copy the link by right-clicking a message and selecting \"Copy Message Link\".",
+    "messageNotFound": "❌ Could not access the referenced message. Make sure the bot has permission to view that channel and the message exists.",
+    "reminderCreationFailed": "❌ Error creating reminder. Please try again.",
+    "commandError": "❌ There was an error processing your command. Please try again.",
+    "rateLimited": "❌ You're sending commands too quickly. Please wait a moment.",
+    "provideTime": "❌ Please provide a time. Usage: `!remind \"in 1 hour\" message` or `!remind @user \"in 1 hour\" message`",
+    "unclosedQuote": "❌ Unclosed quote. Use: `!remind \"in 1 hour\" message` or `!remind @user \"in 1 hour\" message`",
+    "provideMessage": "❌ Please provide a message or reply to a message.",
+    "provideMessageOrLink": "❌ Please provide either a message or a message link.",
+    "provideMessageOrLinkDetailed": "❌ **Please provide either a message or a message link.**\n\n💡 **Options:**\n• Provide `message` for a general reminder\n• Provide `message_link` to reference a specific message (right-click message → Copy Message Link)\n• Use `!remind \"time\"` when replying to a message for auto-detection",
+    "missingReminderId": "❌ Missing Reminder ID",
+    "provideReminderId": "Please provide a reminder ID to delete.\nUse `/reminders list` to see your reminder IDs.",
+    "reminderNotFound": "❌ Reminder Not Found",
+    "reminderNotFoundOrNoPermission": "Reminder with ID {{reminderId}} was not found or you don't have permission to delete it.",
+    "invalidTimezone": "❌ Invalid Timezone",
+    "invalidTimezoneValue": "\"{{timezone}}\" is not a valid timezone.",
+    "generalError": "❌ Error",
+    "genericErrorMessage": "Sorry, there was an error {{action}}. Please try again.",
+    "executionError": "There was an error while executing this command! Please try again.",
+    "processingError": "There was an error processing your reminder. Please try again.",
+    "originalMessageNotFound": "Could not find the original message. It may have been deleted.",
+    "invalidTimeFormat": "❌ Invalid Time Format",
+    "cantUnderstandTimeFormat": "I couldn't understand that time format. Here are some examples:"
+  },
+  "success": {
+    "reminderSet": "⏰ Reminder set",
+    "reminderSetFor": "⏰ Reminder set{{targetText}} for {{time}}",
+    "reminderDeleted": "✅ Reminder deleted",
+    "timezoneUpdated": "✅ Timezone updated",
+    "languageUpdatedTitle": "✅ Language Updated",
+    "reminderDeletedWithId": "✅ Reminder Deleted",
+    "reminderDeletedMessage": "Reminder {{reminderId}} has been deleted.",
+    "timezoneUpdatedTitle": "✅ Timezone Updated",
+    "messageReminderCreated": "✅ Message Reminder Created",
+    "processing": "⏳ Processing..."
+  },
+  "commands": {
+    "help": {
+      "description": "Get help with using the reminder bot",
+      "title": "🤖 Reminder Bot Help",
+      "intro": "I can help you create and manage reminders for yourself and others!",
+      "commandsTitle": "📝 Commands",
+      "commands": {
+        "remind": "`/remind <time> <message> [user]` - Create a reminder",
+        "reminders": "`/reminders [action] [id]` - View/manage your reminders",
+        "timezone": "`/timezone [timezone]` - Set or view your timezone",
+        "help": "`/help` - Show this help message"
+      },
+      "timeExamplesTitle": "⏰ Time Examples",
+      "timezoneTitle": "🌍 Timezone Support",
+      "timezoneSupport": {
+        "line1": "Set your timezone with `/timezone` for better time parsing.",
+        "line2": "Supported: UTC, America/New_York, Europe/London, Asia/Tokyo, etc.",
+        "line3": "All reminders are processed in UTC but displayed in your timezone."
+      },
+      "remindingOthersTitle": "👥 Reminding Others",
+      "remindingOthers": {
+        "line1": "Use `/remind <time> <message> @user` to remind someone else.",
+        "line2": "They'll get notified when the reminder triggers.",
+        "line3": "Both you and they can see the reminder in `/reminders`."
+      },
+      "managingRemindersTitle": "🗂️ Managing Reminders",
+      "managingReminders": {
+        "view": "`/reminders` - View your active reminders",
+        "delete": "`/reminders delete <id>` - Delete a specific reminder"
+      },
+      "footer": "Need more help? Ask a human!"
+    },
+    "remind": {
+      "description": "Create a reminder for yourself or someone else",
+      "options": {
+        "time": "When to remind (e.g., \"in 2 hours\", \"tomorrow at 3pm\")",
+        "message": "What to remind about (can be used with message_link for additional context)",
+        "messageLink": "Discord message link to reference (right-click message → Copy Message Link)",
+        "user": "User to remind (defaults to yourself)"
+      }
+    },
+    "reminders": {
+      "description": "View and manage your reminders",
+      "options": {
+        "action": "Action to perform",
+        "id": "Reminder ID (for delete action)"
+      },
+      "actions": {
+        "list": "List active reminders",
+        "delete": "Delete a reminder"
+      },
+      "noRemindersTitle": "📭 No Reminders",
+      "noRemindersMessage": "You have no active reminders.\n\nUse `/remind` to create a new reminder!",
+      "activeRemindersTitle": "📋 Your Active Reminders",
+      "tipTitle": "💡 Tip",
+      "tipMessage": "Use `/reminders delete <id>` to delete a reminder",
+      "showingLimited": "Showing {{shown}} of {{total}} reminders"
+    },
+    "timezone": {
+      "description": "Set or view your timezone for reminders",
+      "options": {
+        "timezone": "Your timezone (e.g., America/New_York, Europe/London, UTC)"
+      },
+      "currentTimezoneTitle": "🌍 Your Current Timezone",
+      "timezoneField": "Timezone",
+      "currentTimeField": "Current Time",
+      "changeInstruction": "Use `/timezone <timezone>` to change your timezone.",
+      "commonTimezonesFooter": "Common timezones: UTC, America/New_York, Europe/London, Asia/Tokyo",
+      "commonTimezonesTitle": "Common timezones:",
+      "useAutocompleteFooter": "Use timezone autocomplete or visit: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones",
+      "newTimezoneField": "New Timezone",
+      "updateDescription": "Your timezone has been updated! All future reminders will use this timezone for parsing times."
+    },
+    "language": {
+      "description": "Set or view your preferred language for bot messages",
+      "options": {
+        "language": "Your preferred language (e.g., en, es, fr, de, pt, ja)"
+      },
+      "currentLanguageTitle": "🌐 Your Current Language",
+      "languageField": "Language",
+      "changeInstruction": "Use `/language <language>` to change your preferred language.",
+      "availableLanguagesFooter": "Available: English, Español",
+      "availableLanguagesTitle": "Available languages:",
+      "newLanguageField": "New Language",
+      "updateDescription": "Your language preference has been updated! All bot messages will now appear in your chosen language."
+    }
+  },
+  "timeExamples": {
+    "relative": "• **Relative times:** \"in 2 hours\", \"in 30 minutes\", \"in 1 day\"",
+    "specific": "• **Specific times:** \"tomorrow at 3pm\", \"next friday at 9am\"",
+    "dates": "• **Dates:** \"January 15th at 2pm\", \"2025-03-20 14:30\"",
+    "natural": "• **Natural language:** \"tonight\", \"this evening\", \"next week\""
+  },
+  "reminder": {
+    "notification": "🔔 **Reminder** <@{{userId}}>: {{message}}",
+    "notificationNoMessage": "🔔 **Reminder** <@{{userId}}>",
+    "fromUser": "👤 From: <@{{userId}}>",
+    "referencedMessage": "Referenced message",
+    "messageFrom": "Message from {{username}}: {{content}}",
+    "attachmentPlaceholder": "[Attachment/Embed]",
+    "attachmentMedia": "*Attachment/Media*",
+    "jumpToMessage": "[Jump to message →]({{url}})",
+    "aboutMessage": "I'll remind you about this message: **{{preview}}{{ellipsis}}**"
+  },
+  "fields": {
+    "when": "⏰ When",
+    "id": "🆔 ID",
+    "originalMessage": "🔗 Original Message",
+    "validFormats": "Valid formats:",
+    "tryAgain": "Try again with a different time format",
+    "reminderLinkFooter": "The reminder will include a link back to this message"
+  }
+}

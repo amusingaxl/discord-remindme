@@ -18,23 +18,15 @@ describe("withTimeout", () => {
     });
 
     it("should reject with timeout error if promise takes too long", async () => {
-        const slowPromise = new Promise((resolve) =>
-            setTimeout(() => resolve("too late"), 1000),
-        );
+        const slowPromise = new Promise((resolve) => setTimeout(() => resolve("too late"), 1000));
 
-        await expect(withTimeout(slowPromise, 100)).rejects.toThrow(
-            "Operation timed out",
-        );
+        await expect(withTimeout(slowPromise, 100)).rejects.toThrow("Operation timed out");
     });
 
     it("should use custom error message when provided", async () => {
-        const slowPromise = new Promise((resolve) =>
-            setTimeout(() => resolve("too late"), 1000),
-        );
+        const slowPromise = new Promise((resolve) => setTimeout(() => resolve("too late"), 1000));
 
-        await expect(
-            withTimeout(slowPromise, 100, "Custom timeout message"),
-        ).rejects.toThrow("Custom timeout message");
+        await expect(withTimeout(slowPromise, 100, "Custom timeout message")).rejects.toThrow("Custom timeout message");
     });
 
     it("should use default timeout of 2000ms when not specified", async () => {
@@ -55,9 +47,7 @@ describe("withTimeout", () => {
     it("should reject with original error if promise rejects before timeout", async () => {
         const rejectingPromise = Promise.reject(new Error("Original error"));
 
-        await expect(withTimeout(rejectingPromise, 1000)).rejects.toThrow(
-            "Original error",
-        );
+        await expect(withTimeout(rejectingPromise, 1000)).rejects.toThrow("Original error");
     });
 
     it("should handle immediate resolve", async () => {
@@ -69,8 +59,6 @@ describe("withTimeout", () => {
     it("should handle immediate reject", async () => {
         const immediateReject = Promise.reject(new Error("immediate error"));
 
-        await expect(withTimeout(immediateReject, 1000)).rejects.toThrow(
-            "immediate error",
-        );
+        await expect(withTimeout(immediateReject, 1000)).rejects.toThrow("immediate error");
     });
 });

@@ -1,12 +1,31 @@
 import * as chrono from "chrono-node";
 import { DateTime, IANAZone } from "luxon";
+import { t } from "../i18n/i18n.js";
 
 export class TimeParser {
-    static parseTimeString(timeString, userTimezone = "UTC") {
+    constructor(locale = "en-US") {
+        this.locale = locale;
+        this.language = locale.split("-")[0]; // For backward compatibility with tests
+        this.parser = TimeParser.#getParserForLocale(locale);
+    }
+
+    static #getParserForLocale(locale) {
+        // Extract base language from locale
+        const baseLanguage = (locale ?? "en-US").split("-")[0];
+        switch (baseLanguage) {
+            case "es":
+                return chrono.es;
+            case "en":
+            default:
+                return chrono.en;
+        }
+    }
+
+    parseTimeString(timeString, userTimezone = "UTC") {
         const now = DateTime.now().setZone(userTimezone);
 
-        // Let chrono-node handle all parsing with forwardDate to ensure future times
-        const results = chrono.parse(timeString, now.toJSDate(), {
+        // Parse with the locale-specific parser
+        const results = this.parser.parse(timeString, now.toJSDate(), {
             timezone: userTimezone,
             forwardDate: true, // Interpret ambiguous times as future
         });
@@ -28,14 +47,12 @@ export class TimeParser {
         return {
             date: parsedDate.toUTC().toJSDate(),
             originalTimezone: userTimezone,
-            displayTime: parsedDate
-                .setZone(userTimezone)
-                .toFormat("yyyy-MM-dd HH:mm:ss ZZZZ"),
+            displayTime: parsedDate.setZone(userTimezone).toFormat("yyyy-MM-dd HH:mm:ss ZZZZ"),
             isValid: true,
         };
     }
 
-    static isRelativeTime(timeString) {
+    isRelativeTime(timeString) {
         const relativePatterns = [
             /in\s+\d+\s+(minute|hour|day|week|month)s?/i,
             /\d+\s+(minute|hour|day|week|month)s?\s+(from\s+now|later)/i,
@@ -45,63 +62,58 @@ export class TimeParser {
             /this\s+(afternoon|evening|morning)/i,
         ];
 
-        return relativePatterns.some((pattern) =>
-            pattern.test(timeString.toLowerCase()),
-        );
+        return relativePatterns.some((pattern) => pattern.test(timeString.toLowerCase()));
     }
 
-    static getTimeExamples() {
+    getTimeExamples() {
         return [
-            '• **Relative times:** "in 2 hours", "in 30 minutes", "in 1 day"',
-            '• **Specific times:** "tomorrow at 3pm", "next friday at 9am"',
-            '• **Dates:** "January 15th at 2pm", "2025-03-20 14:30"',
-            '• **Natural language:** "tonight", "this evening", "next week"',
+            t("timeExamples.relative", { lng: this.locale }),
+            t("timeExamples.specific", { lng: this.locale }),
+            t("timeExamples.dates", { lng: this.locale }),
+            t("timeExamples.natural", { lng: this.locale }),
         ];
     }
 
-    static formatReminderTime(date, timezone = "UTC", locale = "en-US") {
+    formatReminderTime(date, timezone = "UTC") {
         const reminderDate = DateTime.fromJSDate(date).setZone(timezone);
         const now = DateTime.now().setZone(timezone);
 
+        // Use Intl.RelativeTimeFormat for i18n support with the stored locale
+        const rtf = new Intl.RelativeTimeFormat(this.locale, { numeric: "auto" });
+
+        // Calculate the difference in milliseconds
         const diffMs = reminderDate.toMillis() - now.toMillis();
-        const diffSeconds = Math.floor(diffMs / 1000);
-        const diffMinutes = Math.floor(diffMs / (1000 * 60));
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        const diffWeeks = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 7));
+        const absMs = Math.abs(diffMs);
+        const sign = diffMs > 0 ? 1 : -1;
 
-        // Use Intl.RelativeTimeFormat for better i18n support
-        const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "always" });
-        let timeDisplay = "";
+        // Define thresholds and choose the best unit
+        const units = [
+            { unit: "second", ms: 1000, threshold: 45 * 1000 }, // < 45 seconds (use seconds)
+            { unit: "minute", ms: 60 * 1000, threshold: 45 * 60 * 1000 }, // < 45 minutes (use minutes)
+            { unit: "hour", ms: 60 * 60 * 1000, threshold: 22 * 60 * 60 * 1000 }, // < 22 hours (use hours)
+            { unit: "day", ms: 24 * 60 * 60 * 1000, threshold: 6 * 24 * 60 * 60 * 1000 }, // < 6 days (use days)
+            { unit: "week", ms: 7 * 24 * 60 * 60 * 1000, threshold: 3.5 * 7 * 24 * 60 * 60 * 1000 }, // < 3.5 weeks (use weeks)
+            { unit: "month", ms: 30 * 24 * 60 * 60 * 1000, threshold: 11 * 30 * 24 * 60 * 60 * 1000 }, // < 11 months (use months)
+            { unit: "year", ms: 365 * 24 * 60 * 60 * 1000, threshold: Infinity },
+        ];
 
-        // Choose the most appropriate unit
-        if (Math.abs(diffSeconds) < 60) {
-            timeDisplay = rtf.format(diffSeconds, "second");
-        } else if (Math.abs(diffMinutes) < 60) {
-            timeDisplay = rtf.format(diffMinutes, "minute");
-        } else if (Math.abs(diffHours) < 24) {
-            timeDisplay = rtf.format(diffHours, "hour");
-        } else if (Math.abs(diffDays) < 7) {
-            timeDisplay = rtf.format(diffDays, "day");
-        } else if (Math.abs(diffWeeks) < 4) {
-            timeDisplay = rtf.format(diffWeeks, "week");
-        } else {
-            // For dates far in the future, use absolute format
-            const dtf = new Intl.DateTimeFormat(locale, {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-            });
-            timeDisplay = dtf.format(reminderDate.toJSDate());
+        // Find the appropriate unit
+        let selectedUnit = units[0];
+        for (const unitInfo of units) {
+            if (absMs < unitInfo.threshold) {
+                selectedUnit = unitInfo;
+                break;
+            }
         }
+
+        // Calculate the value for the selected unit and round it
+        const value = Math.round((sign * absMs) / selectedUnit.ms);
+        const relativeTime = rtf.format(value, selectedUnit.unit);
 
         const fullFormat = reminderDate.toFormat("yyyy-MM-dd 'at' h:mm a ZZZZ");
 
         return {
-            relative: timeDisplay,
+            relative: relativeTime,
             absolute: fullFormat,
             timestamp: Math.floor(reminderDate.toMillis() / 1000),
         };

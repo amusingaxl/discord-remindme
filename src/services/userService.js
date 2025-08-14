@@ -3,11 +3,11 @@ export class UserService {
         this.db = database;
     }
 
-    async ensureUser(discordId, timezone = "UTC") {
+    async ensureUser(discordId, timezone = "UTC", language = null) {
         let user = this.getUser(discordId);
         if (!user) {
-            this.createUser(discordId, timezone);
-            user = { discord_id: discordId, timezone };
+            this.createUser(discordId, timezone, language);
+            user = { discord_id: discordId, timezone, language };
         }
         return user;
     }
@@ -19,7 +19,12 @@ export class UserService {
 
     getUserTimezone(discordId) {
         const user = this.getUser(discordId);
-        return user?.timezone || "UTC";
+        return user?.timezone ?? "UTC";
+    }
+
+    getUserLanguage(discordId) {
+        const user = this.getUser(discordId);
+        return user?.language ?? null;
     }
 
     async getUserTimezoneAsync(discordId) {
@@ -34,25 +39,34 @@ export class UserService {
         }
 
         if (user.timezone !== timezone) {
-            this.db.run(`UPDATE users SET timezone = ? WHERE discord_id = ?`, [
-                timezone,
-                discordId,
-            ]);
+            this.db.run(`UPDATE users SET timezone = ? WHERE discord_id = ?`, [timezone, discordId]);
         }
         return { discord_id: discordId, timezone };
     }
 
-    getUser(discordId) {
-        return this.db.get("SELECT * FROM users WHERE discord_id = ?", [
-            discordId,
-        ]);
+    updateUserLanguage(discordId, language) {
+        const user = this.getUser(discordId);
+        if (!user) {
+            this.createUser(discordId, "UTC", language);
+            return { discord_id: discordId, language };
+        }
+
+        if (user.language !== language) {
+            this.db.run(`UPDATE users SET language = ? WHERE discord_id = ?`, [language, discordId]);
+        }
+        return { discord_id: discordId, language };
     }
 
-    createUser(discordId, timezone = "UTC") {
-        const result = this.db.run(
-            `INSERT OR REPLACE INTO users (discord_id, timezone) VALUES (?, ?)`,
-            [discordId, timezone],
-        );
+    getUser(discordId) {
+        return this.db.get("SELECT * FROM users WHERE discord_id = ?", [discordId]);
+    }
+
+    createUser(discordId, timezone = "UTC", language = null) {
+        const result = this.db.run(`INSERT OR REPLACE INTO users (discord_id, timezone, language) VALUES (?, ?, ?)`, [
+            discordId,
+            timezone,
+            language,
+        ]);
         return result.lastID;
     }
 }

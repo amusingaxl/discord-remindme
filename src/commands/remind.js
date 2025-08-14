@@ -1,42 +1,41 @@
 import { SlashCommandBuilder } from "discord.js";
-import { TimeParser } from "../utils/timeParser.js";
+import { t, getCommandLocalizations } from "../i18n/i18n.js";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("remind")
-        .setDescription("Create a reminder for yourself or someone else")
+        .setDescription(t("commands.remind.description"))
+        .setDescriptionLocalizations(getCommandLocalizations("commands.remind.description"))
         .addStringOption((option) =>
             option
                 .setName("time")
-                .setDescription(
-                    'When to remind (e.g., "in 2 hours", "tomorrow at 3pm")',
-                )
+                .setDescription(t("commands.remind.options.time"))
+                .setDescriptionLocalizations(getCommandLocalizations("commands.remind.options.time"))
                 .setRequired(true),
         )
         .addStringOption((option) =>
             option
                 .setName("message")
-                .setDescription(
-                    "What to remind about (can be used with message_link for additional context)",
-                )
+                .setDescription(t("commands.remind.options.message"))
+                .setDescriptionLocalizations(getCommandLocalizations("commands.remind.options.message"))
                 .setRequired(false),
         )
         .addStringOption((option) =>
             option
                 .setName("message_link")
-                .setDescription(
-                    "Discord message link to reference (right-click message → Copy Message Link)",
-                )
+                .setDescription(t("commands.remind.options.messageLink"))
+                .setDescriptionLocalizations(getCommandLocalizations("commands.remind.options.messageLink"))
                 .setRequired(false),
         )
         .addUserOption((option) =>
             option
                 .setName("user")
-                .setDescription("User to remind (defaults to yourself)")
+                .setDescription(t("commands.remind.options.user"))
+                .setDescriptionLocalizations(getCommandLocalizations("commands.remind.options.user"))
                 .setRequired(false),
         ),
 
-    async execute(interaction, { userService, reminderService }) {
+    async execute(interaction, { userService, reminderService, timeParser }) {
         const timeString = interaction.options.getString("time");
         const message = interaction.options.getString("message");
         const messageLink = interaction.options.getString("message_link");
@@ -44,8 +43,7 @@ export default {
         // Require either message or message_link
         if (!message && !messageLink) {
             return await interaction.reply({
-                content:
-                    '❌ **Please provide either a message or a message link.**\n\n💡 **Options:**\n• Provide `message` for a general reminder\n• Provide `message_link` to reference a specific message (right-click message → Copy Message Link)\n• Use `!remind "time"` when replying to a message for auto-detection',
+                content: t("errors.provideMessageOrLinkDetailed"),
                 ephemeral: true,
             });
         }
@@ -58,13 +56,10 @@ export default {
         if (messageLink) {
             // Discord message URLs: https://discord.com/channels/guild_id/channel_id/message_id
             // or for DMs: https://discord.com/channels/@me/channel_id/message_id
-            const urlMatch = messageLink.match(
-                /https:\/\/discord\.com\/channels\/(@me|\d+)\/(\d+)\/(\d+)/,
-            );
+            const urlMatch = messageLink.match(/https:\/\/discord\.com\/channels\/(@me|\d+)\/(\d+)\/(\d+)/);
             if (!urlMatch) {
                 return await interaction.reply({
-                    content:
-                        '❌ Invalid Discord message link. Please copy the link by right-clicking a message and selecting "Copy Message Link".',
+                    content: t("errors.invalidMessageLink"),
                     ephemeral: true,
                 });
             }
@@ -75,16 +70,13 @@ export default {
 
             // Try to fetch the original message
             try {
-                const targetChannel =
-                    await interaction.client.channels.fetch(channelId);
+                const targetChannel = await interaction.client.channels.fetch(channelId);
                 if (targetChannel) {
-                    originalMessage =
-                        await targetChannel.messages.fetch(messageId);
+                    originalMessage = await targetChannel.messages.fetch(messageId);
                 }
             } catch {
                 return await interaction.reply({
-                    content:
-                        "❌ Could not access the referenced message. Make sure the bot has permission to view that channel and the message exists.",
+                    content: t("errors.messageNotFound"),
                     ephemeral: true,
                 });
             }
@@ -93,11 +85,10 @@ export default {
 
         // Try immediate reply to dismiss popover, then quick edit
         await interaction.reply({
-            content: "⏳ Processing...",
+            content: t("success.processing"),
             ephemeral: true,
         });
-        const targetUser =
-            interaction.options.getUser("user") || interaction.user;
+        const targetUser = interaction.options.getUser("user") ?? interaction.user;
         const isRemindingOther = targetUser.id !== interaction.user.id;
 
         // Determine final message
@@ -111,26 +102,19 @@ export default {
         } else {
             // This shouldn't happen due to earlier validation, but just in case
             return await interaction.editReply({
-                content:
-                    "❌ Please provide either a message or a message link.",
+                content: t("errors.provideMessageOrLink"),
             });
         }
 
         try {
             // Get user's timezone preference
-            const userTimezone = userService.getUserTimezone(
-                interaction.user.id,
-            );
+            const userTimezone = userService.getUserTimezone(interaction.user.id);
 
             // Parse time with user's timezone
-            const parsedTime = TimeParser.parseTimeString(
-                timeString,
-                userTimezone,
-            );
-            if (!parsedTime || !parsedTime.isValid) {
+            const parsedTime = timeParser.parseTimeString(timeString, userTimezone);
+            if (!parsedTime?.isValid) {
                 return await interaction.editReply({
-                    content:
-                        '❌ Invalid time format. Try: "in 1 hour", "tomorrow at 3pm", etc.',
+                    content: t("errors.invalidTime"),
                 });
             }
 
@@ -138,7 +122,7 @@ export default {
             await reminderService.createReminder({
                 userId: interaction.user.id,
                 targetUserId: isRemindingOther ? targetUser.id : null,
-                guildId: interaction.guild?.id || null,
+                guildId: interaction.guild?.id ?? null,
                 channelId: interaction.channelId,
                 message: finalMessage,
                 scheduledTime: parsedTime.date.toISOString(),
@@ -147,17 +131,15 @@ export default {
                 referencedMessageUrl: referencedMessageUrl,
             });
 
-            const timeFormatted = TimeParser.formatReminderTime(
-                parsedTime.date,
-                userTimezone,
-            );
+            const timeFormatted = timeParser.formatReminderTime(parsedTime.date, userTimezone);
 
             // Simple confirmation message
-            const targetText = isRemindingOther
-                ? ` for ${targetUser.username}`
-                : "";
+            const targetText = isRemindingOther ? ` for ${targetUser.username}` : "";
             await interaction.editReply({
-                content: `⏰ Reminder set${targetText} for ${timeFormatted.relative}`,
+                content: t("success.reminderSetFor", {
+                    targetText: targetText,
+                    time: timeFormatted.relative,
+                }),
                 allowedMentions: { users: [] }, // Don't ping anyone in confirmation
             });
         } catch (error) {
@@ -165,7 +147,7 @@ export default {
 
             try {
                 await interaction.editReply({
-                    content: "❌ Error creating reminder. Please try again.",
+                    content: t("errors.reminderCreationFailed"),
                 });
             } catch (replyError) {
                 console.error("Failed to send error response:", replyError);

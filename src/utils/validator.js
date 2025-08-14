@@ -11,16 +11,12 @@ export class Validator {
 
     static validateTimeString(timeString) {
         return (
-            timeString &&
-            timeString.length <= CONFIG.LIMITS.TIME_STRING_MAX_LENGTH &&
-            !/[<>{}[\]\\]/.test(timeString)
+            timeString && timeString.length <= CONFIG.LIMITS.TIME_STRING_MAX_LENGTH && !/[<>{}[\]\\]/.test(timeString)
         );
     }
 
     static validateDiscordUrl(url) {
-        return /^https:\/\/discord\.com\/channels\/((@me|\d+)\/\d+\/\d+)$/.test(
-            url,
-        );
+        return /^https:\/\/discord\.com\/channels\/((@me|\d+)\/\d+\/\d+)$/.test(url);
     }
 
     static sanitizeInput(input, maxLength) {
@@ -29,10 +25,6 @@ export class Validator {
     }
 
     static validateTimezone(timezone) {
-        return (
-            timezone &&
-            timezone.length <= CONFIG.LIMITS.TIMEZONE_MAX_LENGTH &&
-            /^[A-Za-z0-9_/+-]+$/.test(timezone)
-        );
+        return timezone && timezone.length <= CONFIG.LIMITS.TIMEZONE_MAX_LENGTH && /^[A-Za-z0-9_/+-]+$/.test(timezone);
     }
 }

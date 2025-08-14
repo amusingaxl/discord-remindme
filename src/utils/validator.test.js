@@ -6,25 +6,15 @@ describe("Validator", () => {
     describe("validateDiscordId", () => {
         it("should validate correct Discord IDs", () => {
             expect(Validator.validateDiscordId("12345678901234567")).toBe(true); // 17 digits
-            expect(Validator.validateDiscordId("123456789012345678")).toBe(
-                true,
-            ); // 18 digits
-            expect(Validator.validateDiscordId("1234567890123456789")).toBe(
-                true,
-            ); // 19 digits
+            expect(Validator.validateDiscordId("123456789012345678")).toBe(true); // 18 digits
+            expect(Validator.validateDiscordId("1234567890123456789")).toBe(true); // 19 digits
         });
 
         it("should reject invalid Discord IDs", () => {
             expect(Validator.validateDiscordId("1234567890123456")).toBe(false); // 16 digits
-            expect(Validator.validateDiscordId("12345678901234567890")).toBe(
-                false,
-            ); // 20 digits
-            expect(Validator.validateDiscordId("abcdefghijklmnopq")).toBe(
-                false,
-            ); // not numeric
-            expect(Validator.validateDiscordId("123456789012345a7")).toBe(
-                false,
-            ); // contains letter
+            expect(Validator.validateDiscordId("12345678901234567890")).toBe(false); // 20 digits
+            expect(Validator.validateDiscordId("abcdefghijklmnopq")).toBe(false); // not numeric
+            expect(Validator.validateDiscordId("123456789012345a7")).toBe(false); // contains letter
             expect(Validator.validateDiscordId("")).toBe(false);
             expect(Validator.validateDiscordId(null)).toBe(false);
             expect(Validator.validateDiscordId(undefined)).toBe(false);
@@ -35,9 +25,7 @@ describe("Validator", () => {
         it("should accept messages within the limit", () => {
             expect(Validator.validateMessageLength("")).toBe(true);
             expect(Validator.validateMessageLength("Hello")).toBe(true);
-            expect(Validator.validateMessageLength("a".repeat(2000))).toBe(
-                true,
-            );
+            expect(Validator.validateMessageLength("a".repeat(2000))).toBe(true);
             expect(Validator.validateMessageLength(null)).toBe(true);
             expect(Validator.validateMessageLength(undefined)).toBe(true);
         });
@@ -62,18 +50,12 @@ describe("Validator", () => {
             expect(Validator.validateTimeString(undefined)).toBeFalsy();
 
             // Too long
-            const tooLong = "a".repeat(
-                CONFIG.LIMITS.TIME_STRING_MAX_LENGTH + 1,
-            );
+            const tooLong = "a".repeat(CONFIG.LIMITS.TIME_STRING_MAX_LENGTH + 1);
             expect(Validator.validateTimeString(tooLong)).toBe(false);
 
             // Contains invalid characters
-            expect(
-                Validator.validateTimeString("in <script>2</script> hours"),
-            ).toBe(false);
-            expect(
-                Validator.validateTimeString("tomorrow {alert('xss')}"),
-            ).toBe(false);
+            expect(Validator.validateTimeString("in <script>2</script> hours")).toBe(false);
+            expect(Validator.validateTimeString("tomorrow {alert('xss')}")).toBe(false);
             expect(Validator.validateTimeString("[malicious]")).toBe(false);
             expect(Validator.validateTimeString("test\\command")).toBe(false);
         });
@@ -90,40 +72,22 @@ describe("Validator", () => {
 
             // DM message
             expect(
-                Validator.validateDiscordUrl(
-                    "https://discord.com/channels/@me/123456789012345678/123456789012345678",
-                ),
+                Validator.validateDiscordUrl("https://discord.com/channels/@me/123456789012345678/123456789012345678"),
             ).toBe(true);
         });
 
         it("should reject invalid Discord URLs", () => {
             // Wrong domain
-            expect(
-                Validator.validateDiscordUrl(
-                    "https://discordapp.com/channels/123/456/789",
-                ),
-            ).toBe(false);
+            expect(Validator.validateDiscordUrl("https://discordapp.com/channels/123/456/789")).toBe(false);
 
             // HTTP instead of HTTPS
-            expect(
-                Validator.validateDiscordUrl(
-                    "http://discord.com/channels/123/456/789",
-                ),
-            ).toBe(false);
+            expect(Validator.validateDiscordUrl("http://discord.com/channels/123/456/789")).toBe(false);
 
             // Missing parts
-            expect(
-                Validator.validateDiscordUrl(
-                    "https://discord.com/channels/123/456",
-                ),
-            ).toBe(false);
+            expect(Validator.validateDiscordUrl("https://discord.com/channels/123/456")).toBe(false);
 
             // Extra parts
-            expect(
-                Validator.validateDiscordUrl(
-                    "https://discord.com/channels/123/456/789/extra",
-                ),
-            ).toBe(false);
+            expect(Validator.validateDiscordUrl("https://discord.com/channels/123/456/789/extra")).toBe(false);
 
             // Not a URL
             expect(Validator.validateDiscordUrl("not a url")).toBe(false);
@@ -149,8 +113,7 @@ describe("Validator", () => {
         });
 
         it("should respect max length", () => {
-            const longString =
-                "This is a very long string that should be truncated";
+            const longString = "This is a very long string that should be truncated";
             expect(Validator.sanitizeInput(longString, 10)).toBe("This is a ");
             expect(Validator.sanitizeInput(longString, 0)).toBe("");
         });

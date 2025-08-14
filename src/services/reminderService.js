@@ -1,3 +1,5 @@
+import { CONFIG } from "../constants/config.js";
+
 export class ReminderService {
     constructor(database, userService) {
         this.db = database;
@@ -42,30 +44,22 @@ export class ReminderService {
         return result.lastID;
     }
 
-    getUserReminders(discordId, includeCompleted = false) {
+    getUserReminders(discordId) {
         const query = `
             SELECT * FROM reminders
             WHERE (user_id = ? OR target_user_id = ?)
             ORDER BY scheduled_time ASC
         `;
-        const reminders = this.db.all(query, [discordId, discordId]);
-
-        if (includeCompleted) {
-            return reminders;
-        }
-        return reminders.filter((r) => !r.is_completed);
+        return this.db.all(query, [discordId, discordId]);
     }
 
-    async getUserRemindersAsync(discordId, includeCompleted = false) {
-        return this.getUserReminders(discordId, includeCompleted);
+    async getUserRemindersAsync(discordId) {
+        return this.getUserReminders(discordId);
     }
 
     getActiveReminders() {
         const now = new Date().toISOString();
-        return this.db.all(
-            "SELECT * FROM reminders WHERE scheduled_time <= ?",
-            [now],
-        );
+        return this.db.all("SELECT * FROM reminders WHERE scheduled_time <= ?", [now]);
     }
 
     async getActiveRemindersAsync() {
@@ -73,9 +67,7 @@ export class ReminderService {
     }
 
     completeReminder(reminderId) {
-        const result = this.db.run("DELETE FROM reminders WHERE id = ?", [
-            reminderId,
-        ]);
+        const result = this.db.run("DELETE FROM reminders WHERE id = ?", [reminderId]);
         return result.changes;
     }
 
@@ -84,10 +76,7 @@ export class ReminderService {
     }
 
     deleteReminder(reminderId, userId) {
-        const result = this.db.run(
-            "DELETE FROM reminders WHERE id = ? AND user_id = ?",
-            [reminderId, userId],
-        );
+        const result = this.db.run("DELETE FROM reminders WHERE id = ? AND user_id = ?", [reminderId, userId]);
         return result.changes;
     }
 
@@ -96,17 +85,15 @@ export class ReminderService {
     }
 
     getReminderById(reminderId) {
-        return this.db.get("SELECT * FROM reminders WHERE id = ?", [
-            reminderId,
-        ]);
+        return this.db.get("SELECT * FROM reminders WHERE id = ?", [reminderId]);
     }
 
     countUserReminders(discordId) {
-        const reminders = this.getUserReminders(discordId, false);
+        const reminders = this.getUserReminders(discordId);
         return reminders.length;
     }
 
-    getUpcomingReminders(discordId, limit = 10) {
+    getUpcomingReminders(discordId, limit = CONFIG.LIMITS.MAX_REMINDERS_DISPLAY) {
         if (discordId) {
             const query = `
                 SELECT * FROM reminders
@@ -127,7 +114,7 @@ export class ReminderService {
         }
     }
 
-    async getUpcomingRemindersAsync(discordId, limit = 10) {
+    async getUpcomingRemindersAsync(discordId, limit = CONFIG.LIMITS.MAX_REMINDERS_DISPLAY) {
         return this.getUpcomingReminders(discordId, limit);
     }
 }

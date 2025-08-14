@@ -1,28 +1,28 @@
-// import path from "node:path";
-// import { fileURLToPath } from "node:url";
-import {
-    Client,
-    GatewayIntentBits,
-    Collection,
-    EmbedBuilder,
-} from "discord.js";
+import { Client, GatewayIntentBits, Collection, EmbedBuilder } from "discord.js";
 import dotenv from "dotenv";
 import helpCommand from "./commands/help.js";
 import remindCommand from "./commands/remind.js";
 import remindersCommand from "./commands/reminders.js";
 import timezoneCommand from "./commands/timezone.js";
+import languageCommand from "./commands/language.js";
+import { CONFIG } from "./constants/config.js";
 import { Database } from "./database/database.js";
 import { ReminderService } from "./services/reminderService.js";
 import { UserService } from "./services/userService.js";
 import { ReminderScheduler } from "./utils/scheduler.js";
 import { TimeParser } from "./utils/timeParser.js";
-
-// Import all commands
+import { t, withLocale, getLocale } from "./i18n/i18n.js";
 
 dotenv.config();
 
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
+// Validate environment variables
+if (!process.env.DISCORD_TOKEN) {
+    throw new Error("DISCORD_TOKEN is not set in .env file");
+}
+
+if (!process.env.DISCORD_APPLICATION_ID) {
+    throw new Error("DISCORD_APPLICATION_ID is not set in .env file");
+}
 
 // Initialize database with path from environment variable
 if (!process.env.DATABASE_PATH) {
@@ -46,40 +46,28 @@ const client = new Client({
 client.commands = new Collection();
 
 // Register all commands
-const commands = [
-    remindCommand,
-    remindersCommand,
-    timezoneCommand,
-    helpCommand,
-];
+const commands = [remindCommand, remindersCommand, timezoneCommand, languageCommand, helpCommand];
 
 for (const command of commands) {
     if ("data" in command && "execute" in command) {
         client.commands.set(command.data.name, command);
         console.log(`📝 Loaded command: ${command.data.name}`);
     } else {
-        console.log(
-            `[WARNING] Command is missing a required "data" or "execute" property.`,
-        );
+        console.log(`[WARNING] Command is missing a required "data" or "execute" property.`);
     }
 }
 
-console.log(
-    `🎯 Loaded ${client.commands.size} commands:`,
-    Array.from(client.commands.keys()),
-);
+console.log(`🎯 Loaded ${client.commands.size} commands:`, Array.from(client.commands.keys()));
 
 // Initialize scheduler with services
-const scheduler = new ReminderScheduler(client, reminderService);
+const scheduler = new ReminderScheduler(client, reminderService, userService);
 
 client.once("ready", () => {
     console.log(`✅ Bot is ready! Logged in as ${client.user.tag}`);
     console.log(`🔧 Bot intents:`, client.options.intents.bitfield);
     console.log(`🏠 Bot is in ${client.guilds.cache.size} servers:`);
     client.guilds.cache.forEach((guild) => {
-        console.log(
-            `  - ${guild.name} (${guild.id}) - ${guild.memberCount} members`,
-        );
+        console.log(`  - ${guild.name} (${guild.id}) - ${guild.memberCount} members`);
     });
     scheduler.start();
 });
@@ -100,28 +88,33 @@ client.on("messageCreate", async (message) => {
     // Ignore bot messages and non-commands
     if (message.author.bot || !message.content.startsWith("!remind")) return;
 
-    try {
-        await handleRemindCommand(message);
-    } catch (error) {
-        console.error("Error handling !remind command:", error);
+    const locale = getLocale(message, userService);
+
+    await withLocale(locale, async () => {
+        const timeParser = new TimeParser(locale);
         try {
-            await message.reply(
-                "❌ There was an error processing your reminder command. Please try again.",
-            );
-        } catch (replyError) {
-            console.error("Failed to send error message:", replyError);
+            await handleRemindCommand(message, timeParser);
+        } catch (error) {
+            console.error("Error handling !remind command:", error);
+            try {
+                await message.reply({
+                    content: t("errors.commandError"),
+                    allowedMentions: { repliedUser: false },
+                });
+            } catch (replyError) {
+                console.error("Failed to send error message:", replyError);
+            }
         }
-    }
+    });
 });
 
 // Handle remind message command
-async function handleRemindCommand(message) {
+async function handleRemindCommand(message, timeParser) {
     // Parse command: !remind [@user] <time> [message]
     const content = message.content.slice(8).trim(); // Remove "!remind "
     if (!content) {
         return await message.reply({
-            content:
-                '❌ Please provide a time. Usage: `!remind "in 1 hour" message` or `!remind @user "in 1 hour" message`',
+            content: t("errors.provideTime"),
             allowedMentions: { repliedUser: false },
         });
     }
@@ -142,8 +135,7 @@ async function handleRemindCommand(message) {
         const endQuote = remainingContent.indexOf('"', 1);
         if (endQuote === -1) {
             return await message.reply({
-                content:
-                    '❌ Unclosed quote. Use: `!remind "in 1 hour" message` or `!remind @user "in 1 hour" message`',
+                content: t("errors.unclosedQuote"),
                 allowedMentions: { repliedUser: false },
             });
         }
@@ -166,13 +158,11 @@ async function handleRemindCommand(message) {
     let referencedMessageId = null;
     let referencedMessageUrl = null;
 
-    if (message.reference && message.reference.messageId) {
+    if (message.reference?.messageId) {
         try {
-            referencedMessage = await message.channel.messages.fetch(
-                message.reference.messageId,
-            );
+            referencedMessage = await message.channel.messages.fetch(message.reference.messageId);
             referencedMessageId = referencedMessage.id;
-            referencedMessageUrl = `https://discord.com/channels/${message.guild?.id || "@me"}/${referencedMessage.channel.id}/${referencedMessage.id}`;
+            referencedMessageUrl = `https://discord.com/channels/${message.guild?.id ?? "@me"}/${referencedMessage.channel.id}/${referencedMessage.id}`;
         } catch {
             // Ignore error if message cannot be fetched
         }
@@ -182,10 +172,10 @@ async function handleRemindCommand(message) {
     let finalMessage = reminderMessage;
     if (!finalMessage && referencedMessage) {
         // Simple placeholder since we'll show the original message in the embed
-        finalMessage = "Referenced message";
+        finalMessage = t("reminder.referencedMessage");
     } else if (!finalMessage) {
         return await message.reply({
-            content: "❌ Please provide a message or reply to a message.",
+            content: t("errors.provideMessage"),
             allowedMentions: { repliedUser: false },
         });
     }
@@ -197,22 +187,20 @@ async function handleRemindCommand(message) {
         const userTimezone = userService.getUserTimezone(message.author.id);
 
         // Parse time
-        const parsedTime = TimeParser.parseTimeString(timeString, userTimezone);
-        if (!parsedTime || !parsedTime.isValid) {
+        const parsedTime = timeParser.parseTimeString(timeString, userTimezone);
+        if (!parsedTime?.isValid) {
             return await message.reply({
-                content:
-                    '❌ Invalid time format. Try: "in 1 hour", "tomorrow at 3pm", etc.',
+                content: t("errors.invalidTime"),
                 allowedMentions: { repliedUser: false },
             });
         }
 
         // Create reminder
-        const isRemindingOther =
-            targetUser && targetUser.id !== message.author.id;
+        const isRemindingOther = targetUser && targetUser.id !== message.author.id;
         await reminderService.createReminder({
             userId: message.author.id,
             targetUserId: isRemindingOther ? targetUser.id : null,
-            guildId: message.guild?.id || null,
+            guildId: message.guild?.id ?? null,
             channelId: message.channelId,
             message: finalMessage,
             scheduledTime: parsedTime.date.toISOString(),
@@ -221,171 +209,161 @@ async function handleRemindCommand(message) {
             referencedMessageUrl: referencedMessageUrl,
         });
 
-        const timeFormatted = TimeParser.formatReminderTime(
-            parsedTime.date,
-            userTimezone,
-        );
+        const timeFormatted = timeParser.formatReminderTime(parsedTime.date, userTimezone);
 
         // Simple confirmation message
-        const targetText = isRemindingOther
-            ? ` for ${targetUser.username}`
-            : "";
+        const targetText = isRemindingOther ? ` for ${targetUser.username}` : "";
         await message.reply({
-            content: `⏰ Reminder set${targetText} for ${timeFormatted.relative}`,
+            content: t("success.reminderSetFor", {
+                targetText: targetText,
+                time: timeFormatted.relative,
+            }),
             allowedMentions: { repliedUser: false, users: [] }, // Don't ping anyone in confirmation
         });
     } catch (error) {
         console.error("Error creating reminder:", error);
         await message.reply({
-            content: "❌ Error creating reminder. Please try again.",
+            content: t("errors.reminderCreationFailed"),
             allowedMentions: { repliedUser: false },
         });
     }
 }
 
 client.on("interactionCreate", async (interaction) => {
-    if (interaction.isChatInputCommand()) {
-        const command = client.commands.get(interaction.commandName);
+    // Get locale once at the beginning for all interaction types
+    const locale = getLocale(interaction, userService);
 
-        if (!command) return;
+    await withLocale(locale, async () => {
+        const timeParser = new TimeParser(locale);
 
-        // Check for duplicate interactions
-        if (processedInteractions.has(interaction.id)) {
-            return;
-        }
-        processedInteractions.add(interaction.id);
+        if (interaction.isChatInputCommand()) {
+            const command = client.commands.get(interaction.commandName);
 
-        // Clean up old interaction IDs (keep only last 100)
-        if (processedInteractions.size > 100) {
-            const firstId = processedInteractions.values().next().value;
-            processedInteractions.delete(firstId);
-        }
+            if (!command) return;
 
-        // Check if interaction is still valid
-        const now = Date.now();
-        const interactionTime = interaction.createdTimestamp;
-        const timeDiff = now - interactionTime;
+            // Check for duplicate interactions
+            if (processedInteractions.has(interaction.id)) {
+                return;
+            }
+            processedInteractions.add(interaction.id);
 
-        if (timeDiff > 2500) {
-            // If interaction is older than 2.5 seconds
-            return; // Skip old interactions
-        }
+            // Clean up old interaction IDs (keep only last 100)
+            if (processedInteractions.size > CONFIG.LIMITS.PROCESSED_INTERACTIONS_CACHE) {
+                const firstId = processedInteractions.values().next().value;
+                processedInteractions.delete(firstId);
+            }
 
-        try {
-            await command.execute(interaction, {
-                userService,
-                reminderService,
-            });
-        } catch (error) {
-            console.error("Error executing command:", error);
+            // Check if interaction is still valid
+            const now = Date.now();
+            const interactionTime = interaction.createdTimestamp;
+            const timeDiff = now - interactionTime;
 
-            // Only try to respond if we haven't already responded
-            if (!interaction.replied && !interaction.deferred) {
-                try {
-                    await interaction.reply({
-                        content:
-                            "There was an error while executing this command! Please try again.",
-                        ephemeral: true,
-                    });
-                } catch (responseError) {
-                    console.error(
-                        "Failed to send error response:",
-                        responseError.message,
-                    );
+            if (timeDiff > CONFIG.LIMITS.INTERACTION_TIMEOUT) {
+                // If interaction is older than 2.5 seconds
+                return; // Skip old interactions
+            }
+
+            try {
+                await command.execute(interaction, {
+                    userService,
+                    reminderService,
+                    timeParser,
+                });
+            } catch (error) {
+                console.error("Error executing command:", error);
+
+                // Only try to respond if we haven't already responded
+                if (!interaction.replied && !interaction.deferred) {
+                    try {
+                        await interaction.reply({
+                            content: t("errors.executionError"),
+                            ephemeral: true,
+                        });
+                    } catch (responseError) {
+                        console.error("Failed to send error response:", responseError.message);
+                    }
+                }
+            }
+        } else if (interaction.isContextMenuCommand()) {
+            const command = client.commands.get(interaction.commandName);
+
+            if (!command) {
+                return;
+            }
+
+            try {
+                await command.execute(interaction, {
+                    userService,
+                    reminderService,
+                    timeParser,
+                });
+            } catch (error) {
+                console.error("Error executing context menu command:", error);
+
+                if (!interaction.replied && !interaction.deferred) {
+                    try {
+                        await interaction.reply({
+                            content: t("errors.executionError"),
+                            ephemeral: true,
+                        });
+                    } catch (responseError) {
+                        console.error("Failed to send context menu error response:", responseError.message);
+                    }
+                }
+            }
+        } else if (interaction.isAutocomplete()) {
+            const command = client.commands.get(interaction.commandName);
+
+            if (!command?.autocomplete) return;
+
+            try {
+                await command.autocomplete(interaction, {
+                    userService,
+                    reminderService,
+                    timeParser,
+                });
+            } catch (error) {
+                console.error("Error handling autocomplete:", error);
+            }
+        } else if (interaction.isModalSubmit()) {
+            try {
+                await handleModalSubmit(interaction, {
+                    userService,
+                    reminderService,
+                    timeParser,
+                });
+            } catch (error) {
+                console.error("Error handling modal submit:", error);
+                if (!interaction.replied && !interaction.deferred) {
+                    try {
+                        await interaction.reply({
+                            content: t("errors.processingError"),
+                            ephemeral: true,
+                        });
+                    } catch (responseError) {
+                        console.error("Failed to send modal error response:", responseError.message);
+                    }
                 }
             }
         }
-    } else if (interaction.isContextMenuCommand()) {
-        const command = client.commands.get(interaction.commandName);
-
-        if (!command) {
-            return;
-        }
-
-        try {
-            await command.execute(interaction, {
-                userService,
-                reminderService,
-            });
-        } catch (error) {
-            console.error("Error executing context menu command:", error);
-
-            if (!interaction.replied && !interaction.deferred) {
-                try {
-                    await interaction.reply({
-                        content:
-                            "There was an error while executing this command! Please try again.",
-                        ephemeral: true,
-                    });
-                } catch (responseError) {
-                    console.error(
-                        "Failed to send context menu error response:",
-                        responseError.message,
-                    );
-                }
-            }
-        }
-    } else if (interaction.isAutocomplete()) {
-        const command = client.commands.get(interaction.commandName);
-
-        if (!command || !command.autocomplete) return;
-
-        try {
-            await command.autocomplete(interaction, {
-                userService,
-                reminderService,
-            });
-        } catch (error) {
-            console.error("Error handling autocomplete:", error);
-        }
-    } else if (interaction.isModalSubmit()) {
-        try {
-            await handleModalSubmit(interaction, {
-                userService,
-                reminderService,
-            });
-        } catch (error) {
-            console.error("Error handling modal submit:", error);
-            if (!interaction.replied && !interaction.deferred) {
-                try {
-                    await interaction.reply({
-                        content:
-                            "There was an error processing your reminder. Please try again.",
-                        ephemeral: true,
-                    });
-                } catch (responseError) {
-                    console.error(
-                        "Failed to send modal error response:",
-                        responseError.message,
-                    );
-                }
-            }
-        }
-    }
+    });
 });
 
 // Handle modal submissions for message reminders
-async function handleModalSubmit(
-    interaction,
-    { userService, reminderService },
-) {
+async function handleModalSubmit(interaction, { userService, reminderService, timeParser }) {
     if (interaction.customId.startsWith("remind_modal_")) {
         const messageId = interaction.customId.replace("remind_modal_", "");
-        const timeString =
-            interaction.fields.getTextInputValue("reminder_time");
-        const customMessage =
-            interaction.fields.getTextInputValue("reminder_message");
+        const timeString = interaction.fields.getTextInputValue("reminder_time");
+        const customMessage = interaction.fields.getTextInputValue("reminder_message");
 
         // Get the original message for context
         let originalMessage;
         try {
-            originalMessage =
-                await interaction.channel.messages.fetch(messageId);
+            originalMessage = await interaction.channel.messages.fetch(messageId);
         } catch (error) {
             console.error("Could not fetch original message:", error);
             return await interaction.reply({
-                content:
-                    "Could not find the original message. It may have been deleted.",
+                content: t("errors.originalMessageNotFound"),
                 ephemeral: true,
             });
         }
@@ -394,28 +372,21 @@ async function handleModalSubmit(
 
         try {
             // Get user's timezone preference
-            const userTimezone = userService.getUserTimezone(
-                interaction.user.id,
-            );
+            const userTimezone = userService.getUserTimezone(interaction.user.id);
 
             // Parse time with user's timezone
-            const parsedTime = TimeParser.parseTimeString(
-                timeString,
-                userTimezone,
-            );
-            if (!parsedTime || !parsedTime.isValid) {
+            const parsedTime = timeParser.parseTimeString(timeString, userTimezone);
+            if (!parsedTime?.isValid) {
                 const embed = new EmbedBuilder()
-                    .setColor("#ff4444")
-                    .setTitle("❌ Invalid Time Format")
-                    .setDescription(
-                        "I couldn't understand that time format. Here are some examples:",
-                    )
+                    .setColor(CONFIG.COLORS.ERROR)
+                    .setTitle(t("errors.invalidTimeFormat"))
+                    .setDescription(t("errors.cantUnderstandTimeFormat"))
                     .addFields({
-                        name: "Valid formats:",
-                        value: TimeParser.getTimeExamples().join("\n"),
+                        name: t("fields.validFormats"),
+                        value: timeParser.getTimeExamples().join("\n"),
                     })
                     .setFooter({
-                        text: "Try again with a different time format",
+                        text: t("fields.tryAgain"),
                     });
 
                 return await interaction.reply({
@@ -426,17 +397,20 @@ async function handleModalSubmit(
 
             // Use custom message or original message content
             const reminderMessage =
-                customMessage ||
-                `Message from ${originalMessage.author.username}: ${originalMessage.content || "[Attachment/Embed]"}`;
+                customMessage ??
+                t("reminder.messageFrom", {
+                    username: originalMessage.author.username,
+                    content: originalMessage.content ?? t("reminder.attachmentPlaceholder"),
+                });
 
             // Create message URL
-            const messageUrl = `https://discord.com/channels/${interaction.guild?.id || "@me"}/${originalMessage.channel.id}/${originalMessage.id}`;
+            const messageUrl = `https://discord.com/channels/${interaction.guild?.id ?? "@me"}/${originalMessage.channel.id}/${originalMessage.id}`;
 
             // Create reminder with message reference
             const reminderId = await reminderService.createReminder({
                 userId: interaction.user.id,
                 targetUserId: null, // Self reminder only for now
-                guildId: interaction.guild?.id || null,
+                guildId: interaction.guild?.id ?? null,
                 channelId: interaction.channelId,
                 message: reminderMessage,
                 scheduledTime: parsedTime.date.toISOString(),
@@ -445,32 +419,36 @@ async function handleModalSubmit(
                 referencedMessageUrl: messageUrl,
             });
 
-            const timeFormatted = TimeParser.formatReminderTime(
-                parsedTime.date,
-                userTimezone,
-            );
+            const timeFormatted = timeParser.formatReminderTime(parsedTime.date, userTimezone);
 
             const embed = new EmbedBuilder()
-                .setColor("#00ff88")
-                .setTitle("✅ Message Reminder Created")
+                .setColor(CONFIG.COLORS.SUCCESS)
+                .setTitle(t("success.messageReminderCreated"))
                 .setDescription(
-                    `I'll remind you about this message: **${reminderMessage.substring(0, 100)}${reminderMessage.length > 100 ? "..." : ""}**`,
+                    t("reminder.aboutMessage", {
+                        preview: reminderMessage.substring(0, CONFIG.LIMITS.REMINDER_PREVIEW_LENGTH),
+                        ellipsis: reminderMessage.length > CONFIG.LIMITS.REMINDER_PREVIEW_LENGTH ? "..." : "",
+                    }),
                 )
                 .addFields(
                     {
-                        name: "⏰ When",
+                        name: t("fields.when"),
                         value: `${timeFormatted.relative}\n(<t:${timeFormatted.timestamp}:F>)`,
                         inline: true,
                     },
-                    { name: "🆔 ID", value: `${reminderId}`, inline: true },
                     {
-                        name: "🔗 Original Message",
-                        value: `[Jump to message](${messageUrl})`,
+                        name: t("fields.id"),
+                        value: `${reminderId}`,
+                        inline: true,
+                    },
+                    {
+                        name: t("fields.originalMessage"),
+                        value: t("reminder.jumpToMessage", { url: messageUrl }),
                         inline: true,
                     },
                 )
                 .setFooter({
-                    text: `The reminder will include a link back to this message`,
+                    text: t("fields.reminderLinkFooter"),
                 });
 
             await interaction.reply({ embeds: [embed], ephemeral: true });
@@ -478,10 +456,12 @@ async function handleModalSubmit(
             console.error("Error creating message reminder:", error);
 
             const embed = new EmbedBuilder()
-                .setColor("#ff4444")
-                .setTitle("❌ Error")
+                .setColor(CONFIG.COLORS.ERROR)
+                .setTitle(t("errors.generalError"))
                 .setDescription(
-                    "Sorry, there was an error creating your message reminder. Please try again.",
+                    t("errors.genericErrorMessage", {
+                        action: "creating your message reminder",
+                    }),
                 );
 
             try {
@@ -503,23 +483,10 @@ async function handleModalSubmit(
     }
 }
 
-// Validate environment variables
-if (!process.env.DISCORD_TOKEN) {
-    console.error("❌ DISCORD_TOKEN is not set in .env file");
-    process.exit(1);
-}
-
-if (!process.env.DISCORD_APPLICATION_ID) {
-    console.error("❌ DISCORD_APPLICATION_ID is not set in .env file");
-    process.exit(1);
-}
-
 client.login(process.env.DISCORD_TOKEN).catch((error) => {
     console.error("❌ Failed to login to Discord:", error.message);
     if (error.message.includes("401")) {
-        console.error(
-            "💡 Check that your DISCORD_TOKEN is correct and the bot is enabled",
-        );
+        console.error("💡 Check that your DISCORD_TOKEN is correct and the bot is enabled");
     }
     process.exit(1);
 });

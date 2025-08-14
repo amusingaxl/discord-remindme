@@ -1,45 +1,51 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { TimeParser } from "../utils/timeParser.js";
+import { CONFIG } from "../constants/config.js";
+import { t, getCommandLocalizations } from "../i18n/i18n.js";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("reminders")
-        .setDescription("View and manage your reminders")
+        .setDescription(t("commands.reminders.description"))
+        .setDescriptionLocalizations(getCommandLocalizations("commands.reminders.description"))
         .addStringOption((option) =>
             option
                 .setName("action")
-                .setDescription("Action to perform")
+                .setDescription(t("commands.reminders.options.action"))
+                .setDescriptionLocalizations(getCommandLocalizations("commands.reminders.options.action"))
                 .addChoices(
-                    { name: "List active reminders", value: "list" },
-                    { name: "Delete a reminder", value: "delete" },
+                    {
+                        name: t("commands.reminders.actions.list"),
+                        value: "list",
+                    },
+                    {
+                        name: t("commands.reminders.actions.delete"),
+                        value: "delete",
+                    },
                 )
                 .setRequired(false),
         )
         .addIntegerOption((option) =>
             option
                 .setName("id")
-                .setDescription("Reminder ID (for delete action)")
+                .setDescription(t("commands.reminders.options.id"))
+                .setDescriptionLocalizations(getCommandLocalizations("commands.reminders.options.id"))
                 .setRequired(false),
         ),
 
-    async execute(interaction, { userService, reminderService }) {
-        const action = interaction.options.getString("action") || "list";
+    async execute(interaction, { userService, reminderService, timeParser }) {
+        const action = interaction.options.getString("action") ?? "list";
         const reminderId = interaction.options.getInteger("id");
 
         try {
             // Get user record (create if doesn't exist)
-            const userRecord = await userService.ensureUser(
-                interaction.user.id,
-            );
+            const userRecord = await userService.ensureUser(interaction.user.id);
 
             if (action === "delete") {
                 if (!reminderId) {
                     const embed = new EmbedBuilder()
-                        .setColor("#ff4444")
-                        .setTitle("❌ Missing Reminder ID")
-                        .setDescription(
-                            "Please provide a reminder ID to delete.\nUse `/reminders list` to see your reminder IDs.",
-                        );
+                        .setColor(CONFIG.COLORS.ERROR)
+                        .setTitle(t("errors.missingReminderId"))
+                        .setDescription(t("errors.provideReminderId"));
 
                     return await interaction.reply({
                         embeds: [embed],
@@ -47,18 +53,13 @@ export default {
                     });
                 }
 
-                const deleted = await reminderService.deleteReminder(
-                    reminderId,
-                    interaction.user.id,
-                );
+                const deleted = await reminderService.deleteReminder(reminderId, interaction.user.id);
 
                 if (deleted === 0) {
                     const embed = new EmbedBuilder()
-                        .setColor("#ff4444")
-                        .setTitle("❌ Reminder Not Found")
-                        .setDescription(
-                            `Reminder with ID ${reminderId} was not found or you don't have permission to delete it.`,
-                        );
+                        .setColor(CONFIG.COLORS.ERROR)
+                        .setTitle(t("errors.reminderNotFound"))
+                        .setDescription(t("errors.reminderNotFoundOrNoPermission", { reminderId }));
 
                     return await interaction.reply({
                         embeds: [embed],
@@ -67,9 +68,9 @@ export default {
                 }
 
                 const embed = new EmbedBuilder()
-                    .setColor("#00ff88")
-                    .setTitle("✅ Reminder Deleted")
-                    .setDescription(`Reminder ${reminderId} has been deleted.`);
+                    .setColor(CONFIG.COLORS.SUCCESS)
+                    .setTitle(t("success.reminderDeletedWithId"))
+                    .setDescription(t("success.reminderDeletedMessage", { reminderId }));
 
                 return await interaction.reply({
                     embeds: [embed],
@@ -77,18 +78,13 @@ export default {
                 });
             }
 
-            const reminders = reminderService.getUserReminders(
-                interaction.user.id,
-                false, // Only get active reminders
-            );
+            const reminders = reminderService.getUserReminders(interaction.user.id);
 
             if (reminders.length === 0) {
                 const embed = new EmbedBuilder()
-                    .setColor("#ffaa00")
-                    .setTitle("📭 No Reminders")
-                    .setDescription(
-                        "You have no active reminders.\n\nUse `/remind` to create a new reminder!",
-                    );
+                    .setColor(CONFIG.COLORS.WARNING)
+                    .setTitle(t("commands.reminders.noRemindersTitle"))
+                    .setDescription(t("commands.reminders.noRemindersMessage"));
 
                 return await interaction.reply({
                     embeds: [embed],
@@ -97,41 +93,39 @@ export default {
             }
 
             const embed = new EmbedBuilder()
-                .setColor("#0099ff")
-                .setTitle("📋 Your Active Reminders");
+                .setColor(CONFIG.COLORS.INFO)
+                .setTitle(t("commands.reminders.activeRemindersTitle"));
 
-            const activeReminders = reminders.filter((r) => !r.is_completed);
+            if (reminders.length > 0) {
+                const reminderList = reminders.slice(0, CONFIG.LIMITS.MAX_REMINDERS_DISPLAY).map((reminder) => {
+                    const timeFormatted = timeParser.formatReminderTime(
+                        new Date(reminder.scheduled_time),
+                        userRecord.timezone,
+                    );
 
-            if (activeReminders.length > 0) {
-                const reminderList = activeReminders
-                    .slice(0, 10)
-                    .map((reminder) => {
-                        const timeFormatted = TimeParser.formatReminderTime(
-                            new Date(reminder.scheduled_time),
-                            userRecord.timezone,
-                        );
+                    const targetInfo =
+                        reminder.target_user_id && reminder.target_user_id !== reminder.user_id
+                            ? ` → <@${reminder.target_user_id}>`
+                            : "";
 
-                        const targetInfo =
-                            reminder.target_user_id &&
-                            reminder.target_user_id !== reminder.user_id
-                                ? ` → <@${reminder.target_user_id}>`
-                                : "";
-
-                        return `**${reminder.id}** - ${reminder.message.substring(0, 50)}${reminder.message.length > 50 ? "..." : ""}${targetInfo}\n⏰ ${timeFormatted.relative} (<t:${timeFormatted.timestamp}:R>)`;
-                    });
+                    return `**${reminder.id}** - ${reminder.message.substring(0, CONFIG.LIMITS.REMINDER_PREVIEW_LENGTH / 2)}${reminder.message.length > CONFIG.LIMITS.REMINDER_PREVIEW_LENGTH / 2 ? "..." : ""}${targetInfo}\n⏰ ${timeFormatted.relative} (<t:${timeFormatted.timestamp}:R>)`;
+                });
 
                 embed.setDescription(reminderList.join("\n\n"));
 
-                if (activeReminders.length > 10) {
+                if (reminders.length > CONFIG.LIMITS.MAX_REMINDERS_DISPLAY) {
                     embed.setFooter({
-                        text: `Showing 10 of ${activeReminders.length} reminders`,
+                        text: t("commands.reminders.showingLimited", {
+                            shown: CONFIG.LIMITS.MAX_REMINDERS_DISPLAY,
+                            total: reminders.length,
+                        }),
                     });
                 }
             }
 
             embed.addFields({
-                name: "💡 Tip",
-                value: "Use `/reminders delete <id>` to delete a reminder",
+                name: t("commands.reminders.tipTitle"),
+                value: t("commands.reminders.tipMessage"),
                 inline: false,
             });
 
@@ -141,9 +135,11 @@ export default {
 
             const embed = new EmbedBuilder()
                 .setColor("#ff4444")
-                .setTitle("❌ Error")
+                .setTitle(t("errors.generalError"))
                 .setDescription(
-                    "Sorry, there was an error managing your reminders. Please try again.",
+                    t("errors.genericErrorMessage", {
+                        action: "managing your reminders",
+                    }),
                 );
 
             try {

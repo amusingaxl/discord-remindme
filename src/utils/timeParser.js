@@ -1,11 +1,11 @@
 import * as chrono from "chrono-node";
 import { DateTime, IANAZone } from "luxon";
 import { t } from "../i18n/i18n.js";
+import { getCurrentTimezone } from "../context/userPreferences.js";
 
 export class TimeParser {
     constructor(locale = "en-US") {
         this.locale = locale;
-        this.language = locale.split("-")[0]; // For backward compatibility with tests
         this.parser = TimeParser.#getParserForLocale(locale);
     }
 
@@ -21,12 +21,14 @@ export class TimeParser {
         }
     }
 
-    parseTimeString(timeString, userTimezone = "UTC") {
-        const now = DateTime.now().setZone(userTimezone);
+    parseTimeString(timeString, userTimezone = null) {
+        // Use context timezone if not provided
+        const timezone = userTimezone ?? getCurrentTimezone();
+        const now = DateTime.now().setZone(timezone);
 
         // Parse with the locale-specific parser
         const results = this.parser.parse(timeString, now.toJSDate(), {
-            timezone: userTimezone,
+            timezone: timezone,
             forwardDate: true, // Interpret ambiguous times as future
         });
 
@@ -46,8 +48,8 @@ export class TimeParser {
 
         return {
             date: parsedDate.toUTC().toJSDate(),
-            originalTimezone: userTimezone,
-            displayTime: parsedDate.setZone(userTimezone).toFormat("yyyy-MM-dd HH:mm:ss ZZZZ"),
+            originalTimezone: timezone,
+            displayTime: parsedDate.setZone(timezone).toFormat("yyyy-MM-dd HH:mm:ss ZZZZ"),
             isValid: true,
         };
     }
@@ -74,9 +76,11 @@ export class TimeParser {
         ];
     }
 
-    formatReminderTime(date, timezone = "UTC") {
-        const reminderDate = DateTime.fromJSDate(date).setZone(timezone);
-        const now = DateTime.now().setZone(timezone);
+    formatReminderTime(date, timezone = null) {
+        // Use context timezone if not provided
+        const tz = timezone ?? getCurrentTimezone();
+        const reminderDate = DateTime.fromJSDate(date).setZone(tz);
+        const now = DateTime.now().setZone(tz);
 
         // Use Intl.RelativeTimeFormat for i18n support with the stored locale
         const rtf = new Intl.RelativeTimeFormat(this.locale, { numeric: "auto" });

@@ -1,5 +1,6 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, MessageFlags } from "discord.js";
 import { t, getCommandLocalizations } from "../i18n/i18n.js";
+import { getCurrentTimezone } from "../context/userPreferences.js";
 
 export default {
     data: new SlashCommandBuilder()
@@ -35,7 +36,7 @@ export default {
                 .setRequired(false),
         ),
 
-    async execute(interaction, { userService, reminderService, timeParser }) {
+    async execute(interaction, { reminderService, timeParser }) {
         const timeString = interaction.options.getString("time");
         const message = interaction.options.getString("message");
         const messageLink = interaction.options.getString("message_link");
@@ -44,7 +45,7 @@ export default {
         if (!message && !messageLink) {
             return await interaction.reply({
                 content: t("errors.provideMessageOrLinkDetailed"),
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -60,7 +61,7 @@ export default {
             if (!urlMatch) {
                 return await interaction.reply({
                     content: t("errors.invalidMessageLink"),
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -77,7 +78,7 @@ export default {
             } catch {
                 return await interaction.reply({
                     content: t("errors.messageNotFound"),
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
         }
@@ -86,7 +87,7 @@ export default {
         // Try immediate reply to dismiss popover, then quick edit
         await interaction.reply({
             content: t("success.processing"),
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
         const targetUser = interaction.options.getUser("user") ?? interaction.user;
         const isRemindingOther = targetUser.id !== interaction.user.id;
@@ -107,11 +108,8 @@ export default {
         }
 
         try {
-            // Get user's timezone preference
-            const userTimezone = userService.getUserTimezone(interaction.user.id);
-
-            // Parse time with user's timezone
-            const parsedTime = timeParser.parseTimeString(timeString, userTimezone);
+            // Parse time (will use timezone from context)
+            const parsedTime = timeParser.parseTimeString(timeString);
             if (!parsedTime?.isValid) {
                 return await interaction.editReply({
                     content: t("errors.invalidTime"),
@@ -126,12 +124,12 @@ export default {
                 channelId: interaction.channelId,
                 message: finalMessage,
                 scheduledTime: parsedTime.date.toISOString(),
-                timezone: userTimezone,
+                timezone: getCurrentTimezone(),
                 referencedMessageId: referencedMessageId,
                 referencedMessageUrl: referencedMessageUrl,
             });
 
-            const timeFormatted = timeParser.formatReminderTime(parsedTime.date, userTimezone);
+            const timeFormatted = timeParser.formatReminderTime(parsedTime.date);
 
             // Simple confirmation message
             const targetText = isRemindingOther ? ` for ${targetUser.username}` : "";

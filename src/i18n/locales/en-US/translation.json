@@ -33,6 +33,8 @@
     "reminderDeleted": "✅ Reminder deleted",
     "timezoneUpdated": "✅ Timezone updated",
     "languageUpdatedTitle": "✅ Language Updated",
+    "languageUpdateError": "❌ Error",
+    "languageUpdateErrorMessage": "Sorry, there was an error updating your language preference. Please try again.",
     "reminderDeletedWithId": "✅ Reminder Deleted",
     "reminderDeletedMessage": "Reminder {{reminderId}} has been deleted.",
     "timezoneUpdatedTitle": "✅ Timezone Updated",
@@ -115,15 +117,21 @@
     "language": {
       "description": "Set or view your preferred language for bot messages",
       "options": {
-        "language": "Your preferred language (e.g., en, es, fr, de, pt, ja)"
+        "language": "Your preferred language"
       },
       "currentLanguageTitle": "🌐 Your Current Language",
       "languageField": "Language",
       "changeInstruction": "Use `/language <language>` to change your preferred language.",
       "availableLanguagesFooter": "Available: English, Español",
       "availableLanguagesTitle": "Available languages:",
+      "availableLanguagesList": "English (en-US), Español (es-ES)",
       "newLanguageField": "New Language",
-      "updateDescription": "Your language preference has been updated! All bot messages will now appear in your chosen language."
+      "updateDescription": "Your language preference has been updated! All bot messages will now appear in your chosen language.",
+      "autoDetectDisplay": "Auto-detect: {{locale}}",
+      "languages": {
+        "en-US": "English (US)",
+        "es-ES": "Español (Spain)"
+      }
     }
   },
   "timeExamples": {

@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Collection, EmbedBuilder } from "discord.js";
+import { Client, GatewayIntentBits, Collection, EmbedBuilder, MessageFlags } from "discord.js";
 import dotenv from "dotenv";
 import helpCommand from "./commands/help.js";
 import remindCommand from "./commands/remind.js";
@@ -11,7 +11,8 @@ import { ReminderService } from "./services/reminderService.js";
 import { UserService } from "./services/userService.js";
 import { ReminderScheduler } from "./utils/scheduler.js";
 import { TimeParser } from "./utils/timeParser.js";
-import { t, withLocale, getLocale } from "./i18n/i18n.js";
+import { t } from "./i18n/i18n.js";
+import { getUserPreferences, withPreferences, getCurrentTimezone } from "./context/userPreferences.js";
 
 dotenv.config();
 
@@ -88,10 +89,10 @@ client.on("messageCreate", async (message) => {
     // Ignore bot messages and non-commands
     if (message.author.bot || !message.content.startsWith("!remind")) return;
 
-    const locale = getLocale(message, userService);
+    const preferences = getUserPreferences(message, userService);
 
-    await withLocale(locale, async () => {
-        const timeParser = new TimeParser(locale);
+    await withPreferences(preferences, async () => {
+        const timeParser = new TimeParser(preferences.locale);
         try {
             await handleRemindCommand(message, timeParser);
         } catch (error) {
@@ -183,11 +184,8 @@ async function handleRemindCommand(message, timeParser) {
     // Use imported modules
 
     try {
-        // Get user's timezone
-        const userTimezone = userService.getUserTimezone(message.author.id);
-
-        // Parse time
-        const parsedTime = timeParser.parseTimeString(timeString, userTimezone);
+        // Parse time (will use timezone from context)
+        const parsedTime = timeParser.parseTimeString(timeString);
         if (!parsedTime?.isValid) {
             return await message.reply({
                 content: t("errors.invalidTime"),
@@ -204,12 +202,12 @@ async function handleRemindCommand(message, timeParser) {
             channelId: message.channelId,
             message: finalMessage,
             scheduledTime: parsedTime.date.toISOString(),
-            timezone: userTimezone,
+            timezone: getCurrentTimezone(),
             referencedMessageId: referencedMessageId,
             referencedMessageUrl: referencedMessageUrl,
         });
 
-        const timeFormatted = timeParser.formatReminderTime(parsedTime.date, userTimezone);
+        const timeFormatted = timeParser.formatReminderTime(parsedTime.date);
 
         // Simple confirmation message
         const targetText = isRemindingOther ? ` for ${targetUser.username}` : "";
@@ -230,38 +228,28 @@ async function handleRemindCommand(message, timeParser) {
 }
 
 client.on("interactionCreate", async (interaction) => {
-    // Get locale once at the beginning for all interaction types
-    const locale = getLocale(interaction, userService);
+    if (interaction.isChatInputCommand()) {
+        const command = client.commands.get(interaction.commandName);
 
-    await withLocale(locale, async () => {
-        const timeParser = new TimeParser(locale);
+        if (!command) return;
 
-        if (interaction.isChatInputCommand()) {
-            const command = client.commands.get(interaction.commandName);
+        // Check for duplicate interactions
+        if (processedInteractions.has(interaction.id)) {
+            return;
+        }
+        processedInteractions.add(interaction.id);
 
-            if (!command) return;
+        // Clean up old interaction IDs (keep only last 100)
+        if (processedInteractions.size > CONFIG.LIMITS.PROCESSED_INTERACTIONS_CACHE) {
+            const firstId = processedInteractions.values().next().value;
+            processedInteractions.delete(firstId);
+        }
 
-            // Check for duplicate interactions
-            if (processedInteractions.has(interaction.id)) {
-                return;
-            }
-            processedInteractions.add(interaction.id);
+        // Get user preferences and set up context
+        const preferences = getUserPreferences(interaction, userService);
 
-            // Clean up old interaction IDs (keep only last 100)
-            if (processedInteractions.size > CONFIG.LIMITS.PROCESSED_INTERACTIONS_CACHE) {
-                const firstId = processedInteractions.values().next().value;
-                processedInteractions.delete(firstId);
-            }
-
-            // Check if interaction is still valid
-            const now = Date.now();
-            const interactionTime = interaction.createdTimestamp;
-            const timeDiff = now - interactionTime;
-
-            if (timeDiff > CONFIG.LIMITS.INTERACTION_TIMEOUT) {
-                // If interaction is older than 2.5 seconds
-                return; // Skip old interactions
-            }
+        await withPreferences(preferences, async () => {
+            const timeParser = new TimeParser(preferences.locale);
 
             try {
                 await command.execute(interaction, {
@@ -277,19 +265,25 @@ client.on("interactionCreate", async (interaction) => {
                     try {
                         await interaction.reply({
                             content: t("errors.executionError"),
-                            ephemeral: true,
+                            flags: MessageFlags.Ephemeral,
                         });
                     } catch (responseError) {
                         console.error("Failed to send error response:", responseError.message);
                     }
                 }
             }
-        } else if (interaction.isContextMenuCommand()) {
-            const command = client.commands.get(interaction.commandName);
+        });
+    } else if (interaction.isContextMenuCommand()) {
+        const command = client.commands.get(interaction.commandName);
 
-            if (!command) {
-                return;
-            }
+        if (!command) {
+            return;
+        }
+
+        const preferences = getUserPreferences(interaction, userService);
+
+        await withPreferences(preferences, async () => {
+            const timeParser = new TimeParser(preferences.locale);
 
             try {
                 await command.execute(interaction, {
@@ -304,28 +298,36 @@ client.on("interactionCreate", async (interaction) => {
                     try {
                         await interaction.reply({
                             content: t("errors.executionError"),
-                            ephemeral: true,
+                            flags: MessageFlags.Ephemeral,
                         });
                     } catch (responseError) {
                         console.error("Failed to send context menu error response:", responseError.message);
                     }
                 }
             }
-        } else if (interaction.isAutocomplete()) {
-            const command = client.commands.get(interaction.commandName);
+        });
+    } else if (interaction.isAutocomplete()) {
+        const command = client.commands.get(interaction.commandName);
 
-            if (!command?.autocomplete) return;
+        if (!command?.autocomplete) return;
 
-            try {
-                await command.autocomplete(interaction, {
-                    userService,
-                    reminderService,
-                    timeParser,
-                });
-            } catch (error) {
-                console.error("Error handling autocomplete:", error);
-            }
-        } else if (interaction.isModalSubmit()) {
+        try {
+            // For autocomplete, we need to respond immediately without complex setup
+            // Just pass the services directly without preferences context
+            await command.autocomplete(interaction, {
+                userService,
+                reminderService,
+                timeParser: new TimeParser(), // Use default locale for autocomplete
+            });
+        } catch (error) {
+            console.error("Error handling autocomplete:", error);
+        }
+    } else if (interaction.isModalSubmit()) {
+        const preferences = getUserPreferences(interaction, userService);
+
+        await withPreferences(preferences, async () => {
+            const timeParser = new TimeParser(preferences.locale);
+
             try {
                 await handleModalSubmit(interaction, {
                     userService,
@@ -338,19 +340,19 @@ client.on("interactionCreate", async (interaction) => {
                     try {
                         await interaction.reply({
                             content: t("errors.processingError"),
-                            ephemeral: true,
+                            flags: MessageFlags.Ephemeral,
                         });
                     } catch (responseError) {
                         console.error("Failed to send modal error response:", responseError.message);
                     }
                 }
             }
-        }
-    });
+        });
+    }
 });
 
 // Handle modal submissions for message reminders
-async function handleModalSubmit(interaction, { userService, reminderService, timeParser }) {
+async function handleModalSubmit(interaction, { reminderService, timeParser }) {
     if (interaction.customId.startsWith("remind_modal_")) {
         const messageId = interaction.customId.replace("remind_modal_", "");
         const timeString = interaction.fields.getTextInputValue("reminder_time");
@@ -364,18 +366,15 @@ async function handleModalSubmit(interaction, { userService, reminderService, ti
             console.error("Could not fetch original message:", error);
             return await interaction.reply({
                 content: t("errors.originalMessageNotFound"),
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
         // Use imported modules
 
         try {
-            // Get user's timezone preference
-            const userTimezone = userService.getUserTimezone(interaction.user.id);
-
-            // Parse time with user's timezone
-            const parsedTime = timeParser.parseTimeString(timeString, userTimezone);
+            // Parse time (will use timezone from context)
+            const parsedTime = timeParser.parseTimeString(timeString);
             if (!parsedTime?.isValid) {
                 const embed = new EmbedBuilder()
                     .setColor(CONFIG.COLORS.ERROR)
@@ -391,7 +390,7 @@ async function handleModalSubmit(interaction, { userService, reminderService, ti
 
                 return await interaction.reply({
                     embeds: [embed],
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -414,12 +413,12 @@ async function handleModalSubmit(interaction, { userService, reminderService, ti
                 channelId: interaction.channelId,
                 message: reminderMessage,
                 scheduledTime: parsedTime.date.toISOString(),
-                timezone: userTimezone,
+                timezone: getCurrentTimezone(),
                 referencedMessageId: originalMessage.id,
                 referencedMessageUrl: messageUrl,
             });
 
-            const timeFormatted = timeParser.formatReminderTime(parsedTime.date, userTimezone);
+            const timeFormatted = timeParser.formatReminderTime(parsedTime.date);
 
             const embed = new EmbedBuilder()
                 .setColor(CONFIG.COLORS.SUCCESS)
@@ -451,7 +450,7 @@ async function handleModalSubmit(interaction, { userService, reminderService, ti
                     text: t("fields.reminderLinkFooter"),
                 });
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
         } catch (error) {
             console.error("Error creating message reminder:", error);
 
@@ -468,12 +467,12 @@ async function handleModalSubmit(interaction, { userService, reminderService, ti
                 if (interaction.replied) {
                     await interaction.followUp({
                         embeds: [embed],
-                        ephemeral: true,
+                        flags: MessageFlags.Ephemeral,
                     });
                 } else {
                     await interaction.reply({
                         embeds: [embed],
-                        ephemeral: true,
+                        flags: MessageFlags.Ephemeral,
                     });
                 }
             } catch (replyError) {

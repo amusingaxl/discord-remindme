@@ -1,6 +1,7 @@
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from "discord.js";
 import { CONFIG } from "../constants/config.js";
-import { t, getLocale, withLocale, getCommandLocalizations } from "../i18n/i18n.js";
+import { t, getCommandLocalizations } from "../i18n/i18n.js";
+import { getUserPreferences, withPreferences } from "../context/userPreferences.js";
 
 export default {
     data: new SlashCommandBuilder()
@@ -24,9 +25,13 @@ export default {
         const newLanguage = interaction.options.getString("language");
         const userId = interaction.user.id;
 
+        // Defer immediately to avoid timeout
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
         try {
             // Get the user's current language for this response
-            const currentLang = getLocale(interaction, userService);
+            const preferences = getUserPreferences(interaction, userService);
+            const currentLanguage = preferences.locale;
 
             if (!newLanguage) {
                 // Show current language setting
@@ -34,8 +39,10 @@ export default {
                 const currentSetting = userRecord.language ?? "auto";
                 const displayLanguage =
                     currentSetting === "auto"
-                        ? `Auto-detect (currently: ${currentLang})`
-                        : getLanguageName(currentSetting);
+                        ? t("commands.language.autoDetectDisplay", {
+                              locale: t(`commands.language.languages.${currentLanguage}`),
+                          })
+                        : t(`commands.language.languages.${currentSetting}`);
 
                 const embed = new EmbedBuilder()
                     .setColor(CONFIG.COLORS.INFO)
@@ -50,7 +57,7 @@ export default {
                         text: t("commands.language.availableLanguagesFooter"),
                     });
 
-                return await interaction.reply({ embeds: [embed], ephemeral: true });
+                return await interaction.editReply({ embeds: [embed] });
             }
 
             // Validate language
@@ -59,16 +66,17 @@ export default {
                 const embed = new EmbedBuilder()
                     .setColor(CONFIG.COLORS.ERROR)
                     .setTitle(t("errors.invalidLanguage"))
-                    .setDescription(t("errors.invalidLanguageValue", { language: newLanguage }))
+                    .setDescription(
+                        t("errors.invalidLanguageValue", {
+                            locale: t(`commands.language.languages.${newLanguage}`),
+                        }),
+                    )
                     .addFields({
                         name: t("commands.language.availableLanguagesTitle"),
-                        value: "English (en), Español (es)",
+                        value: t("commands.language.availableLanguagesList"),
                     });
 
-                return await interaction.reply({
-                    embeds: [embed],
-                    ephemeral: true,
-                });
+                return await interaction.editReply({ embeds: [embed] });
             }
 
             // Update language preference in database FIRST
@@ -80,16 +88,22 @@ export default {
             if (newLanguage === "auto") {
                 // For auto, show message in Discord's detected locale
                 // This will now correctly use Discord's locale since DB is already updated
-                effectiveLocale = getLocale(interaction, userService);
+                const prefs = getUserPreferences(interaction, userService);
+                effectiveLocale = prefs.locale;
             } else {
                 effectiveLocale = newLanguage;
             }
 
-            const displayLanguage =
-                newLanguage === "auto" ? `Auto-detect (currently: ${effectiveLocale})` : getLanguageName(newLanguage);
-
             // Show success message in the NEW locale
-            await withLocale(effectiveLocale, async () => {
+            await withPreferences({ locale: effectiveLocale }, async () => {
+                // Generate display language INSIDE the new locale context
+                const displayLanguage =
+                    newLanguage === "auto"
+                        ? t("commands.language.autoDetectDisplay", {
+                              locale: t(`commands.language.languages.${effectiveLocale}`),
+                          })
+                        : t(`commands.language.languages.${newLanguage}`);
+
                 const embed = new EmbedBuilder()
                     .setColor(CONFIG.COLORS.SUCCESS)
                     .setTitle(t("success.languageUpdatedTitle"))
@@ -100,26 +114,27 @@ export default {
                     })
                     .setDescription(t("commands.language.updateDescription"));
 
-                await interaction.reply({ embeds: [embed], ephemeral: true });
+                await interaction.editReply({ embeds: [embed] });
             });
         } catch (error) {
             console.error("Error updating language:", error);
 
-            // Fallback to English for error message
+            // Show error message
             const embed = new EmbedBuilder()
                 .setColor(CONFIG.COLORS.ERROR)
-                .setTitle("❌ Error")
-                .setDescription("Sorry, there was an error updating your language preference. Please try again.");
+                .setTitle(t("success.languageUpdateError"))
+                .setDescription(t("success.languageUpdateErrorMessage"));
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            // Use followUp if we've already replied, otherwise reply
+            try {
+                if (interaction.replied) {
+                    await interaction.followUp({ embeds: [embed], flags: MessageFlags.Ephemeral });
+                } else {
+                    await interaction.editReply({ embeds: [embed] });
+                }
+            } catch (replyError) {
+                console.error("Failed to send error response:", replyError);
+            }
         }
     },
 };
-
-function getLanguageName(code) {
-    const names = {
-        "en-US": "English",
-        "es-ES": "Español (Spanish)",
-    };
-    return names[code] ?? code;
-}

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from "discord.js";
 import { CONFIG } from "../constants/config.js";
 import { t, getCommandLocalizations } from "../i18n/i18n.js";
 
@@ -59,6 +59,6 @@ export default {
             )
             .setFooter({ text: t("commands.help.footer") });
 
-        await interaction.reply({ embeds: [embed], ephemeral: true });
+        await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     },
 };

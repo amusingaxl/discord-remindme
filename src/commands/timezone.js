@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from "discord.js";
 import { DateTime } from "luxon";
 import { CONFIG } from "../constants/config.js";
 import { TimeParser } from "../utils/timeParser.js";
@@ -32,6 +32,9 @@ export default {
     async execute(interaction, { userService }) {
         const newTimezone = interaction.options.getString("timezone");
 
+        // Defer immediately to avoid timeout
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
         try {
             // For timezone validation, we can respond quickly
             if (newTimezone && !TimeParser.validateTimezone(newTimezone)) {
@@ -47,10 +50,7 @@ export default {
                         text: t("commands.timezone.useAutocompleteFooter"),
                     });
 
-                return await interaction.reply({
-                    embeds: [embed],
-                    ephemeral: true,
-                });
+                return await interaction.editReply({ embeds: [embed] });
             }
 
             // Get or create user record quickly
@@ -79,10 +79,7 @@ export default {
                         text: t("commands.timezone.commonTimezonesFooter"),
                     });
 
-                return await interaction.reply({
-                    embeds: [embed],
-                    ephemeral: true,
-                });
+                return await interaction.editReply({ embeds: [embed] });
             }
 
             userService.updateUserTimezone(interaction.user.id, newTimezone);
@@ -106,7 +103,7 @@ export default {
                 )
                 .setDescription(t("commands.timezone.updateDescription"));
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error("Error updating timezone:", error);
 
@@ -119,7 +116,16 @@ export default {
                     }),
                 );
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            // Use followUp if we've already replied, otherwise reply
+            try {
+                if (interaction.replied) {
+                    await interaction.followUp({ embeds: [embed], flags: MessageFlags.Ephemeral });
+                } else {
+                    await interaction.editReply({ embeds: [embed] });
+                }
+            } catch (replyError) {
+                console.error("Failed to send error response:", replyError);
+            }
         }
     },
 };

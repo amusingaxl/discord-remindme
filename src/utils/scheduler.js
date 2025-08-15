@@ -1,6 +1,7 @@
 import { CONFIG, DISCORD_ERRORS } from "../constants/config.js";
 import { TimeParser } from "./timeParser.js";
-import { t, withLocale } from "../i18n/i18n.js";
+import { t } from "../i18n/i18n.js";
+import { withPreferences } from "../context/userPreferences.js";
 
 class ReminderScheduler {
     constructor(client, reminderService, userService) {
@@ -63,12 +64,17 @@ class ReminderScheduler {
                 return;
             }
 
-            // Get the target user's language preference
-            const effectiveLanguage = this.userService.getUserLanguage(targetUserId) ?? "en-US";
+            // Get the target user's preferences (language and timezone)
+            const targetUserLanguage = this.userService.getUserLanguage(targetUserId);
+            const targetUserTimezone = this.userService.getUserTimezone(targetUserId);
+            const preferences = {
+                locale: targetUserLanguage ?? "en-US",
+                timezone: targetUserTimezone ?? "UTC",
+            };
 
-            // Build simple text message with user mention - use target user's language
+            // Build simple text message with user mention - use target user's preferences
             let reminderText;
-            await withLocale(effectiveLanguage, async () => {
+            await withPreferences(preferences, async () => {
                 if (reminder.message && reminder.message.trim() !== "") {
                     reminderText = t("reminder.notification", {
                         userId: targetUserId,

@@ -33,6 +33,8 @@
     "reminderDeleted": "✅ Recordatorio eliminado",
     "timezoneUpdated": "✅ Zona horaria actualizada",
     "languageUpdatedTitle": "✅ Idioma Actualizado",
+    "languageUpdateError": "❌ Error",
+    "languageUpdateErrorMessage": "Lo siento, hubo un error al actualizar tu preferencia de idioma. Por favor, inténtalo de nuevo.",
     "reminderDeletedWithId": "✅ Recordatorio Eliminado",
     "reminderDeletedMessage": "El recordatorio {{reminderId}} ha sido eliminado.",
     "timezoneUpdatedTitle": "✅ Zona Horaria Actualizada",
@@ -115,15 +117,21 @@
     "language": {
       "description": "Establecer o ver tu idioma preferido para los mensajes del bot",
       "options": {
-        "language": "Tu idioma preferido (ej., en, es, fr, de, pt, ja)"
+        "language": "Tu idioma preferido"
       },
       "currentLanguageTitle": "🌐 Tu Idioma Actual",
       "languageField": "Idioma",
       "changeInstruction": "Usa `/language <idioma>` para cambiar tu idioma preferido.",
       "availableLanguagesFooter": "Disponibles: English, Español",
       "availableLanguagesTitle": "Idiomas disponibles:",
+      "availableLanguagesList": "Inglés (en-US), Español (es-ES)",
       "newLanguageField": "Nuevo Idioma",
-      "updateDescription": "¡Tu preferencia de idioma ha sido actualizada! Todos los mensajes del bot ahora aparecerán en tu idioma elegido."
+      "updateDescription": "¡Tu preferencia de idioma ha sido actualizada! Todos los mensajes del bot ahora aparecerán en tu idioma elegido.",
+      "autoDetectDisplay": "Autodetección: {{locale}}",
+      "languages": {
+        "en-US": "Inglés (EEUU)",
+        "es-ES": "Español (España)"
+      }
     }
   },
   "timeExamples": {

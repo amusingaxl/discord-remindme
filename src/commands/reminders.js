@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from "discord.js";
 import { CONFIG } from "../constants/config.js";
 import { t, getCommandLocalizations } from "../i18n/i18n.js";
 
@@ -35,10 +35,12 @@ export default {
     async execute(interaction, { userService, reminderService, timeParser }) {
         const action = interaction.options.getString("action") ?? "list";
         const reminderId = interaction.options.getInteger("id");
+        // Defer immediately to avoid timeout
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         try {
-            // Get user record (create if doesn't exist)
-            const userRecord = await userService.ensureUser(interaction.user.id);
+            // Create the user record if it doesn't exist
+            await userService.ensureUser(interaction.user.id);
 
             if (action === "delete") {
                 if (!reminderId) {
@@ -47,9 +49,8 @@ export default {
                         .setTitle(t("errors.missingReminderId"))
                         .setDescription(t("errors.provideReminderId"));
 
-                    return await interaction.reply({
+                    return await interaction.editReply({
                         embeds: [embed],
-                        ephemeral: true,
                     });
                 }
 
@@ -61,9 +62,8 @@ export default {
                         .setTitle(t("errors.reminderNotFound"))
                         .setDescription(t("errors.reminderNotFoundOrNoPermission", { reminderId }));
 
-                    return await interaction.reply({
+                    return await interaction.editReply({
                         embeds: [embed],
-                        ephemeral: true,
                     });
                 }
 
@@ -72,9 +72,8 @@ export default {
                     .setTitle(t("success.reminderDeletedWithId"))
                     .setDescription(t("success.reminderDeletedMessage", { reminderId }));
 
-                return await interaction.reply({
+                return await interaction.editReply({
                     embeds: [embed],
-                    ephemeral: true,
                 });
             }
 
@@ -86,9 +85,8 @@ export default {
                     .setTitle(t("commands.reminders.noRemindersTitle"))
                     .setDescription(t("commands.reminders.noRemindersMessage"));
 
-                return await interaction.reply({
+                return await interaction.editReply({
                     embeds: [embed],
-                    ephemeral: true,
                 });
             }
 
@@ -98,10 +96,8 @@ export default {
 
             if (reminders.length > 0) {
                 const reminderList = reminders.slice(0, CONFIG.LIMITS.MAX_REMINDERS_DISPLAY).map((reminder) => {
-                    const timeFormatted = timeParser.formatReminderTime(
-                        new Date(reminder.scheduled_time),
-                        userRecord.timezone,
-                    );
+                    // formatReminderTime will use timezone from context
+                    const timeFormatted = timeParser.formatReminderTime(new Date(reminder.scheduled_time));
 
                     const targetInfo =
                         reminder.target_user_id && reminder.target_user_id !== reminder.user_id
@@ -129,7 +125,7 @@ export default {
                 inline: false,
             });
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error("Error managing reminders:", error);
 
@@ -146,12 +142,10 @@ export default {
                 if (interaction.replied) {
                     await interaction.followUp({
                         embeds: [embed],
-                        ephemeral: true,
                     });
                 } else {
-                    await interaction.reply({
+                    await interaction.editReply({
                         embeds: [embed],
-                        ephemeral: true,
                     });
                 }
             } catch (replyError) {

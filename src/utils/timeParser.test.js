@@ -9,22 +9,22 @@ describe("TimeParser", () => {
     describe("constructor and language support", () => {
         it("should create instance with English parser by default", () => {
             const parser = new TimeParser();
-            expect(parser.language).toBe("en");
+            expect(parser.locale).toBe("en-US");
         });
 
         it("should create instance with English parser when specified", () => {
             const parser = new TimeParser("en");
-            expect(parser.language).toBe("en");
+            expect(parser.locale).toBe("en");
         });
 
         it("should create instance with Spanish parser when specified", () => {
-            const parser = new TimeParser("es");
-            expect(parser.language).toBe("es");
+            const parser = new TimeParser("es-ES");
+            expect(parser.locale).toBe("es-ES");
         });
 
         it("should default to English for unknown languages", () => {
-            const parser = new TimeParser("fr");
-            expect(parser.language).toBe("fr");
+            const parser = new TimeParser("fr-FR");
+            expect(parser.locale).toBe("fr-FR");
             // Parser should still work (defaults to English)
             const result = parser.parseTimeString("tomorrow", "UTC");
             expect(result).toBeTruthy();

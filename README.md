@@ -6,6 +6,7 @@ A feature-rich Discord bot for creating and managing reminders with timezone sup
 
 - ⏰ Natural language time parsing ("in 2 hours", "tomorrow at 3pm")
 - 🌍 Timezone support for accurate scheduling
+- 🌐 Multi-language support (English, Spanish, Portuguese, Ukrainian)
 - 💬 Reply-based reminders with message context
 - 🔗 Message link references for slash commands
 - 👥 Remind yourself or other users
@@ -136,6 +137,7 @@ npm start
 - `/remind time:value message_link:url` - Create a reminder referencing a message
 - `/reminders` - View your upcoming reminders
 - `/timezone set:value` - Set your timezone
+- `/language` - View or change your preferred language
 - `/help` - Show help information
 
 ### Message Commands
@@ -150,6 +152,40 @@ npm start
 - Specific: "tomorrow at 3pm", "next Friday at 9am"
 - Natural: "tonight", "this evening", "next week"
 - Absolute: "January 15th at 2pm", "2025-03-20 14:30"
+
+## Internationalization (i18n)
+
+The bot supports multiple languages for all commands and messages:
+
+### Supported Languages
+
+- 🇺🇸 **English** (en-US) - Default
+- 🇪🇸 **Español** (es-ES) - Spanish
+- 🇧🇷 **Português** (pt-BR) - Portuguese (Brazil)
+- 🇺🇦 **Українська** (uk) - Ukrainian
+
+### Language Features
+
+- **Auto-detection**: Automatically uses Discord's interface language
+- **Per-user preferences**: Each user can set their preferred language
+- **Complete translations**: All commands, error messages, and responses are localized
+- **Fallback support**: Falls back to English for any missing translations
+
+### Setting Your Language
+
+1. **View current language**: `/language`
+2. **Change language**: `/language language:Español`
+3. **Auto-detect**: `/language language:Auto-detect from Discord`
+
+### For Developers
+
+To add a new language:
+
+1. Create a new translation file in `src/i18n/locales/{locale}/translation.json`
+2. Copy the English translation as a template
+3. Translate all strings to the new language
+4. Update the language command choices in `src/commands/language.js`
+5. Add locale mapping in `src/context/userPreferences.js`
 
 ## Architecture
 

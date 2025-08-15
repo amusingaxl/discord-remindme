@@ -136,8 +136,8 @@ npm start
 - `/remind time:value message:text [user:@mention]` - Create a reminder for yourself or someone else
 - `/remind time:value message_link:url [user:@mention]` - Create a reminder referencing a message
 - `/reminders` - View your upcoming reminders
-- `/timezone timezone:value` - Set your timezone
-- `/language` - View or change your preferred language
+- `/timezone [timezone:value]` - View or change your timezone
+- `/language [language:value]` - View or change your preferred language
 - `/help` - Show help information
 
 ### Message Commands

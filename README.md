@@ -133,8 +133,8 @@ npm start
 
 ### Slash Commands
 
-- `/remind time:value message:text` - Create a reminder
-- `/remind time:value message_link:url` - Create a reminder referencing a message
+- `/remind time:value message:text [user:@mention]` - Create a reminder for yourself or someone else
+- `/remind time:value message_link:url [user:@mention]` - Create a reminder referencing a message
 - `/reminders` - View your upcoming reminders
 - `/timezone timezone:value` - Set your timezone
 - `/language` - View or change your preferred language

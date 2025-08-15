@@ -136,7 +136,7 @@ npm start
 - `/remind time:value message:text` - Create a reminder
 - `/remind time:value message_link:url` - Create a reminder referencing a message
 - `/reminders` - View your upcoming reminders
-- `/timezone set:value` - Set your timezone
+- `/timezone timezone:value` - Set your timezone
 - `/language` - View or change your preferred language
 - `/help` - Show help information
 

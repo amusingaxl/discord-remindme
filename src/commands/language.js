@@ -17,6 +17,8 @@ export default {
                 .addChoices(
                     { name: "English (US)", value: "en-US" },
                     { name: "Español (España)", value: "es-ES" },
+                    { name: "Português (Brasil)", value: "pt-BR" },
+                    { name: "Українська", value: "uk" },
                     { name: "Auto-detect from Discord", value: "auto" },
                 ),
         ),
@@ -61,7 +63,7 @@ export default {
             }
 
             // Validate language
-            const validLanguages = ["en-US", "es-ES", "auto"];
+            const validLanguages = ["en-US", "es-ES", "pt-BR", "uk", "auto"];
             if (!validLanguages.includes(newLanguage)) {
                 const embed = new EmbedBuilder()
                     .setColor(CONFIG.COLORS.ERROR)

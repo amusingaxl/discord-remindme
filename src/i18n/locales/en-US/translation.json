@@ -122,15 +122,17 @@
       "currentLanguageTitle": "🌐 Your Current Language",
       "languageField": "Language",
       "changeInstruction": "Use `/language <language>` to change your preferred language.",
-      "availableLanguagesFooter": "Available: English, Español",
+      "availableLanguagesFooter": "Available: English, Español, Português, Українська",
       "availableLanguagesTitle": "Available languages:",
-      "availableLanguagesList": "English (en-US), Español (es-ES)",
+      "availableLanguagesList": "English (en-US), Español (es-ES), Português (pt-BR), Українська (uk)",
       "newLanguageField": "New Language",
       "updateDescription": "Your language preference has been updated! All bot messages will now appear in your chosen language.",
       "autoDetectDisplay": "Auto-detect: {{locale}}",
       "languages": {
         "en-US": "English (US)",
-        "es-ES": "Español (Spain)"
+        "es-ES": "Español (Spain)",
+        "pt-BR": "Português (Brazil)",
+        "uk": "Українська"
       }
     }
   },

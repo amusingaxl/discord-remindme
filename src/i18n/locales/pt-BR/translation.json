@@ -1,0 +1,164 @@
+{
+  "errors": {
+    "invalidLanguage": "❌ Idioma Inválido",
+    "invalidLanguageValue": "\"{{language}}\" não é um idioma válido.",
+    "invalidTime": "❌ Formato de tempo inválido. Tente: \"em 1 hora\", \"amanhã às 15h\", etc.",
+    "invalidMessageLink": "❌ Link de mensagem do Discord inválido. Por favor, copie o link clicando com o botão direito em uma mensagem e selecionando \"Copiar Link da Mensagem\".",
+    "messageNotFound": "❌ Não foi possível acessar a mensagem referenciada. Certifique-se de que o bot tem permissão para ver esse canal e que a mensagem existe.",
+    "reminderCreationFailed": "❌ Erro ao criar lembrete. Por favor, tente novamente.",
+    "commandError": "❌ Houve um erro ao processar seu comando. Por favor, tente novamente.",
+    "rateLimited": "❌ Você está enviando comandos muito rapidamente. Por favor, aguarde um momento.",
+    "provideTime": "❌ Por favor, forneça um horário. Uso: `!remind \"em 1 hora\" mensagem` ou `!remind @usuário \"em 1 hora\" mensagem`",
+    "unclosedQuote": "❌ Aspas não fechadas. Use: `!remind \"em 1 hora\" mensagem` ou `!remind @usuário \"em 1 hora\" mensagem`",
+    "provideMessage": "❌ Por favor, forneça uma mensagem ou responda a uma mensagem.",
+    "provideMessageOrLink": "❌ Por favor, forneça uma mensagem ou um link de mensagem.",
+    "provideMessageOrLinkDetailed": "❌ **Por favor, forneça uma mensagem ou um link de mensagem.**\n\n💡 **Opções:**\n• Forneça `mensagem` para um lembrete geral\n• Forneça `link_mensagem` para referenciar uma mensagem específica (clique direito na mensagem → Copiar Link da Mensagem)\n• Use `!remind \"tempo\"` ao responder a uma mensagem para detecção automática",
+    "missingReminderId": "❌ ID do Lembrete Ausente",
+    "provideReminderId": "Por favor, forneça um ID de lembrete para excluir.\nUse `/reminders list` para ver seus IDs de lembretes.",
+    "reminderNotFound": "❌ Lembrete Não Encontrado",
+    "reminderNotFoundOrNoPermission": "O lembrete com ID {{reminderId}} não foi encontrado ou você não tem permissão para excluí-lo.",
+    "invalidTimezone": "❌ Fuso Horário Inválido",
+    "invalidTimezoneValue": "\"{{timezone}}\" não é um fuso horário válido.",
+    "generalError": "❌ Erro",
+    "genericErrorMessage": "Desculpe, houve um erro {{action}}. Por favor, tente novamente.",
+    "executionError": "Houve um erro ao executar este comando! Por favor, tente novamente.",
+    "processingError": "Houve um erro ao processar seu lembrete. Por favor, tente novamente.",
+    "originalMessageNotFound": "Não foi possível encontrar a mensagem original. Ela pode ter sido excluída.",
+    "invalidTimeFormat": "❌ Formato de Tempo Inválido",
+    "cantUnderstandTimeFormat": "Não consegui entender esse formato de tempo. Aqui estão alguns exemplos:"
+  },
+  "success": {
+    "reminderSet": "⏰ Lembrete definido",
+    "reminderSetFor": "⏰ Lembrete definido{{targetText}} para {{time}}",
+    "reminderDeleted": "✅ Lembrete excluído",
+    "timezoneUpdated": "✅ Fuso horário atualizado",
+    "languageUpdatedTitle": "✅ Idioma Atualizado",
+    "languageUpdateError": "❌ Erro",
+    "languageUpdateErrorMessage": "Desculpe, houve um erro ao atualizar sua preferência de idioma. Por favor, tente novamente.",
+    "reminderDeletedWithId": "✅ Lembrete Excluído",
+    "reminderDeletedMessage": "O lembrete {{reminderId}} foi excluído.",
+    "timezoneUpdatedTitle": "✅ Fuso Horário Atualizado",
+    "messageReminderCreated": "✅ Lembrete de Mensagem Criado",
+    "processing": "⏳ Processando..."
+  },
+  "commands": {
+    "help": {
+      "description": "Obtenha ajuda para usar o bot de lembretes",
+      "title": "🤖 Ajuda do Bot de Lembretes",
+      "intro": "Posso ajudá-lo a criar e gerenciar lembretes para você e outras pessoas!",
+      "commandsTitle": "📝 Comandos",
+      "commands": {
+        "remind": "`/remind <tempo> <mensagem> [usuário]` - Criar um lembrete",
+        "reminders": "`/reminders [ação] [id]` - Ver/gerenciar seus lembretes",
+        "timezone": "`/timezone [fuso_horário]` - Definir ou ver seu fuso horário",
+        "help": "`/help` - Mostrar esta mensagem de ajuda"
+      },
+      "timeExamplesTitle": "⏰ Exemplos de Tempo",
+      "timezoneTitle": "🌍 Suporte a Fuso Horário",
+      "timezoneSupport": {
+        "line1": "Defina seu fuso horário com `/timezone` para melhor análise de tempo.",
+        "line2": "Suportados: UTC, America/Sao_Paulo, Europe/London, Asia/Tokyo, etc.",
+        "line3": "Todos os lembretes são processados em UTC mas exibidos no seu fuso horário."
+      },
+      "remindingOthersTitle": "👥 Lembrar Outras Pessoas",
+      "remindingOthers": {
+        "line1": "Use `/remind <tempo> <mensagem> @usuário` para lembrar outra pessoa.",
+        "line2": "Eles receberão uma notificação quando o lembrete for acionado.",
+        "line3": "Tanto você quanto eles podem ver o lembrete em `/reminders`."
+      },
+      "managingRemindersTitle": "🗂️ Gerenciar Lembretes",
+      "managingReminders": {
+        "view": "`/reminders` - Ver seus lembretes ativos",
+        "delete": "`/reminders delete <id>` - Excluir um lembrete específico"
+      },
+      "footer": "Precisa de mais ajuda? Pergunte a um humano!"
+    },
+    "remind": {
+      "description": "Criar um lembrete para você ou outra pessoa",
+      "options": {
+        "time": "Quando lembrar (ex: \"em 2 horas\", \"amanhã às 15h\")",
+        "message": "O que lembrar (pode ser usado com link_mensagem para contexto adicional)",
+        "messageLink": "Link de mensagem do Discord para referenciar (clique direito na mensagem → Copiar Link da Mensagem)",
+        "user": "Usuário para lembrar (padrão é você)"
+      }
+    },
+    "reminders": {
+      "description": "Ver e gerenciar seus lembretes",
+      "options": {
+        "action": "Ação a realizar",
+        "id": "ID do lembrete (para ação de excluir)"
+      },
+      "actions": {
+        "list": "Listar lembretes ativos",
+        "delete": "Excluir um lembrete"
+      },
+      "noRemindersTitle": "📭 Sem Lembretes",
+      "noRemindersMessage": "Você não tem lembretes ativos.\n\nUse `/remind` para criar um novo lembrete!",
+      "activeRemindersTitle": "📋 Seus Lembretes Ativos",
+      "tipTitle": "💡 Dica",
+      "tipMessage": "Use `/reminders delete <id>` para excluir um lembrete",
+      "showingLimited": "Mostrando {{shown}} de {{total}} lembretes"
+    },
+    "timezone": {
+      "description": "Definir ou ver seu fuso horário para lembretes",
+      "options": {
+        "timezone": "Seu fuso horário (ex: America/Sao_Paulo, Europe/London, UTC)"
+      },
+      "currentTimezoneTitle": "🌍 Seu Fuso Horário Atual",
+      "timezoneField": "Fuso Horário",
+      "currentTimeField": "Hora Atual",
+      "changeInstruction": "Use `/timezone <fuso_horário>` para mudar seu fuso horário.",
+      "commonTimezonesFooter": "Fusos horários comuns: UTC, America/Sao_Paulo, Europe/Lisbon, America/New_York",
+      "commonTimezonesTitle": "Fusos horários comuns:",
+      "useAutocompleteFooter": "Use o autocompletar de fuso horário ou visite: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones",
+      "newTimezoneField": "Novo Fuso Horário",
+      "updateDescription": "Seu fuso horário foi atualizado! Todos os futuros lembretes usarão este fuso horário para analisar os horários."
+    },
+    "language": {
+      "description": "Definir ou ver seu idioma preferido para mensagens do bot",
+      "options": {
+        "language": "Seu idioma preferido"
+      },
+      "currentLanguageTitle": "🌐 Seu Idioma Atual",
+      "languageField": "Idioma",
+      "changeInstruction": "Use `/language <idioma>` para mudar seu idioma preferido.",
+      "availableLanguagesFooter": "Disponíveis: English, Español, Português, Українська",
+      "availableLanguagesTitle": "Idiomas disponíveis:",
+      "availableLanguagesList": "Inglês (en-US), Espanhol (es-ES), Português (pt-BR), Ucraniano (uk)",
+      "newLanguageField": "Novo Idioma",
+      "updateDescription": "Sua preferência de idioma foi atualizada! Todas as mensagens do bot agora aparecerão no seu idioma escolhido.",
+      "autoDetectDisplay": "Detecção automática: {{locale}}",
+      "languages": {
+        "en-US": "Inglês (EUA)",
+        "es-ES": "Espanhol (Espanha)",
+        "pt-BR": "Português (Brasil)",
+        "uk": "Ucraniano"
+      }
+    }
+  },
+  "timeExamples": {
+    "relative": "• **Tempos relativos:** \"em 2 horas\", \"em 30 minutos\", \"em 1 dia\"",
+    "specific": "• **Horários específicos:** \"amanhã às 15h\", \"próxima sexta às 9h\"",
+    "dates": "• **Datas:** \"15 de janeiro às 14h\", \"2025-03-20 14:30\"",
+    "natural": "• **Linguagem natural:** \"hoje à noite\", \"esta tarde\", \"próxima semana\""
+  },
+  "reminder": {
+    "notification": "🔔 **Lembrete** <@{{userId}}>: {{message}}",
+    "notificationNoMessage": "🔔 **Lembrete** <@{{userId}}>",
+    "fromUser": "👤 De: <@{{userId}}>",
+    "referencedMessage": "Mensagem referenciada",
+    "messageFrom": "Mensagem de {{username}}: {{content}}",
+    "attachmentPlaceholder": "[Anexo/Embed]",
+    "attachmentMedia": "*Anexo/Mídia*",
+    "jumpToMessage": "[Ir para mensagem →]({{url}})",
+    "aboutMessage": "Vou lembrá-lo sobre esta mensagem: **{{preview}}{{ellipsis}}**"
+  },
+  "fields": {
+    "when": "⏰ Quando",
+    "id": "🆔 ID",
+    "originalMessage": "🔗 Mensagem Original",
+    "validFormats": "Formatos válidos:",
+    "tryAgain": "Tente novamente com um formato de tempo diferente",
+    "reminderLinkFooter": "O lembrete incluirá um link de volta para esta mensagem"
+  }
+}

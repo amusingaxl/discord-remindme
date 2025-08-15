@@ -122,15 +122,17 @@
       "currentLanguageTitle": "🌐 Tu Idioma Actual",
       "languageField": "Idioma",
       "changeInstruction": "Usa `/language <idioma>` para cambiar tu idioma preferido.",
-      "availableLanguagesFooter": "Disponibles: English, Español",
+      "availableLanguagesFooter": "Disponibles: English, Español, Português, Українська",
       "availableLanguagesTitle": "Idiomas disponibles:",
-      "availableLanguagesList": "Inglés (en-US), Español (es-ES)",
+      "availableLanguagesList": "Inglés (en-US), Español (es-ES), Portugués (pt-BR), Ucraniano (uk)",
       "newLanguageField": "Nuevo Idioma",
       "updateDescription": "¡Tu preferencia de idioma ha sido actualizada! Todos los mensajes del bot ahora aparecerán en tu idioma elegido.",
       "autoDetectDisplay": "Autodetección: {{locale}}",
       "languages": {
         "en-US": "Inglés (EEUU)",
-        "es-ES": "Español (España)"
+        "es-ES": "Español (España)",
+        "pt-BR": "Portugués (Brasil)",
+        "uk": "Ucraniano"
       }
     }
   },

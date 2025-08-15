@@ -91,6 +91,10 @@ function getDiscordLocale(interaction) {
         "en-GB": "en-US", // Map British English to US English
         "es-ES": "es-ES",
         "es-419": "es-ES", // Map Latin American Spanish to Spain Spanish
+        "pt-BR": "pt-BR",
+        pt: "pt-BR", // Map Portuguese to Brazilian Portuguese
+        uk: "uk",
+        "uk-UA": "uk", // Map Ukrainian with region to Ukrainian
     };
 
     // If not in map, try to map language part to a supported locale
@@ -98,6 +102,8 @@ function getDiscordLocale(interaction) {
         const lang = locale.split("-")[0];
         if (lang === "en") return "en-US";
         if (lang === "es") return "es-ES";
+        if (lang === "pt") return "pt-BR";
+        if (lang === "uk") return "uk";
     }
 
     return localeMap[locale] ?? "en-US";

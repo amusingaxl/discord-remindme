@@ -22,6 +22,9 @@ export class Database {
         // Enable foreign keys
         this.db.pragma("foreign_keys = ON");
 
+        // Enable write-ahead logging
+        this.db.pragma("journal_mode = WAL");
+
         // Initialize tables
         this.init();
     }

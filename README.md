@@ -240,8 +240,7 @@ To add a new language:
 ```
 services:
   bot:             # Main Discord bot application
-  database-backup: # Automated SQLite backup service
-  database-viewer: # Optional web UI for database (debug profile)
+  sqlite-web:      # Optional SQLite web UI (development only)
 ```
 
 ## Cloud Deployment Examples

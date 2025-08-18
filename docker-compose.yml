@@ -3,8 +3,9 @@ services:
   bot:
     build: .
     restart: unless-stopped
+    init: true
     env_file:
-      - .env
+      - .env.production
     environment:
       - DATABASE_PATH=/app/data/reminders.sqlite
       - NODE_ENV=production
@@ -13,6 +14,8 @@ services:
       - ./logs:/app/logs
     networks:
       - remindme-network-prod
+    stop_signal: SIGTERM
+    stop_grace_period: 10s
     logging:
       driver: "json-file"
       options:

@@ -1,0 +1,15 @@
+{
+  "watch": ["src"],
+  "ext": "js,json",
+  "ignore": ["src/**/*.test.js"],
+  "exec": "node",
+  "signal": "SIGTERM",
+  "delay": 1000,
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "events": {
+    "restart": "echo 'App restarted due to file changes'",
+    "exit": "echo 'App exited, waiting for changes...'"
+  }
+}

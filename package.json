@@ -5,8 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/bot.js",
-    "deploy": "node src/deploy-commands.js",
-    "dev": "node src/bot.js",
+    "deploy": "node scripts/deploy.js",
+    "deploy:prod": "node scripts/deploy.js --production",
+    "dev": "node scripts/dev.js",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
@@ -22,7 +23,6 @@
     "better-sqlite3": "^12.2.0",
     "chrono-node": "^2.8.4",
     "discord.js": "^14.21.0",
-    "dotenv": "^17.2.1",
     "i18next": "^25.3.4",
     "i18next-fs-backend": "^2.6.0",
     "luxon": "^3.7.1"
@@ -30,6 +30,7 @@
   "devDependencies": {
     "@eslint/js": "^9.33.0",
     "@jest/globals": "^29.7.0",
+    "dotenv": "^17.2.1",
     "eslint": "^9.33.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",

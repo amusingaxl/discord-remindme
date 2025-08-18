@@ -5,18 +5,30 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     restart: unless-stopped
+    init: true
+    tty: true
+    stdin_open: true
     env_file:
-      - .env
+      - .env.development
     environment:
-      - DATABASE_PATH=/app/data/reminders.sqlite
+      - DATABASE_PATH=/app/data/reminders_dev.sqlite
       - NODE_ENV=development
+      - FORCE_COLOR=1
     volumes:
       - ./src:/app/src
       - ./package.json:/app/package.json
       - ./package-lock.json:/app/package-lock.json
+      - ./nodemon.json:/app/nodemon.json
       - ./data:/app/data
     networks:
       - remindme-network-dev
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # SQLite Web Interface for development
   sqlite-web:

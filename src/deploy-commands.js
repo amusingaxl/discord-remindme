@@ -2,17 +2,14 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { REST, Routes } from "discord.js";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 // Validate environment variables
 if (!process.env.DISCORD_TOKEN) {
-    throw new Error("DISCORD_TOKEN is not set in .env file");
+    throw new Error("DISCORD_TOKEN is not set in environment variables");
 }
 
 if (!process.env.DISCORD_APPLICATION_ID) {
-    throw new Error("DISCORD_APPLICATION_ID is not set in .env file");
+    throw new Error("DISCORD_APPLICATION_ID is not set in environment variables");
 }
 
 const __filename = fileURLToPath(import.meta.url);

@@ -23,5 +23,5 @@ RUN mkdir -p /app/data && \
 # Switch to node user
 USER node
 
-# Default command
-CMD ["nodemon", "--watch", "src", "--ext", "js,json", "src/bot.js"]
+# Use nodemon - config will be provided via volume mount
+CMD ["nodemon", "src/bot.js"]

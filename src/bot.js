@@ -1,5 +1,4 @@
 import { Client, GatewayIntentBits, Collection, EmbedBuilder, MessageFlags } from "discord.js";
-import dotenv from "dotenv";
 import helpCommand from "./commands/help.js";
 import remindCommand from "./commands/remind.js";
 import remindersCommand from "./commands/reminders.js";
@@ -14,21 +13,20 @@ import { TimeParser } from "./utils/timeParser.js";
 import { t } from "./i18n/i18n.js";
 import { getUserPreferences, withPreferences, getCurrentTimezone } from "./context/userPreferences.js";
 
-dotenv.config();
-
 // Validate environment variables
 if (!process.env.DISCORD_TOKEN) {
-    throw new Error("DISCORD_TOKEN is not set in .env file");
+    throw new Error("DISCORD_TOKEN is not set in environment variables");
 }
 
 if (!process.env.DISCORD_APPLICATION_ID) {
-    throw new Error("DISCORD_APPLICATION_ID is not set in .env file");
+    throw new Error("DISCORD_APPLICATION_ID is not set in environment variables");
 }
 
 // Initialize database with path from environment variable
 if (!process.env.DATABASE_PATH) {
     throw new Error("DATABASE_PATH environment variable is required");
 }
+
 const database = new Database(process.env.DATABASE_PATH);
 
 // Initialize services
@@ -74,11 +72,40 @@ client.once("ready", () => {
 });
 
 // Handle graceful shutdown
-process.on("SIGINT", async () => {
-    console.log("\n🛑 Shutting down gracefully...");
-    scheduler.stop();
-    await client.destroy();
-    process.exit(0);
+const shutdown = async (signal) => {
+    console.log(`\n🛑 Received ${signal}, shutting down gracefully...`);
+
+    try {
+        scheduler.stop();
+        console.log("✅ Scheduler stopped");
+
+        await client.destroy();
+        console.log("✅ Discord client disconnected");
+
+        database.close();
+        console.log("✅ Database connection closed");
+
+        console.log("👋 Goodbye!");
+        process.exit(0);
+    } catch (error) {
+        console.error("❌ Error during shutdown:", error);
+        process.exit(1);
+    }
+};
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGUSR2", () => shutdown("SIGUSR2")); // Nodemon uses this for restart
+
+// Handle uncaught exceptions
+process.on("uncaughtException", (error) => {
+    console.error("❌ Uncaught Exception:", error);
+    shutdown("UNCAUGHT_EXCEPTION");
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+    console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+    shutdown("UNHANDLED_REJECTION");
 });
 
 // Track processed interactions to prevent duplicates

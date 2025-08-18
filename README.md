@@ -29,24 +29,72 @@ git clone https://github.com/yourusername/remindme-discord.git
 cd remindme-discord
 ```
 
-2. Create `.env` file from example:
+2. Create environment files:
+
+For development:
 
 ```bash
-cp .env.example .env
+cp .env.example .env.development
+# Edit .env.development with your Discord credentials
 ```
 
-3. Edit `.env` and add your Discord credentials:
+For production:
+
+```bash
+cp .env.example .env.production
+# Edit .env.production with your Discord credentials
+```
+
+3. Configure your environment variables:
 
 ```env
 DISCORD_TOKEN=your_bot_token_here
 DISCORD_APPLICATION_ID=your_application_id_here
+DATABASE_PATH=./data/reminders.sqlite  # or /app/data/reminders.sqlite for Docker
+NODE_ENV=development  # or production
 ```
+
+### Environment Configuration
+
+The application expects the following environment variables:
+
+```env
+DISCORD_TOKEN=your_discord_bot_token
+DISCORD_APPLICATION_ID=your_application_id
+DATABASE_PATH=/path/to/database.sqlite
+NODE_ENV=development|production
+```
+
+#### Local Development
+
+For local development convenience, create `.env.development` from the template:
+
+```bash
+cp .env.example .env.development
+# Edit .env.development with your credentials
+
+# Run with npm (loads .env.development automatically)
+npm run dev
+npm run deploy
+```
+
+#### Production Deployment
+
+The application is **cloud-native** and expects environment variables to be set by your deployment platform:
+
+- **AWS ECS/Fargate**: Use task definitions with secrets from AWS Secrets Manager
+- **Kubernetes**: Use ConfigMaps and Secrets
+- **Heroku/Railway**: Set via dashboard or CLI
+- **Docker**: Pass via docker run `-e` flags or compose `environment:`
+- **GitHub Actions**: Use repository secrets
+
+**Important:** Production deployments should NOT rely on .env files. Use your platform's native secrets management.
 
 ### Running with Docker Compose
 
 #### Production Mode
 
-Start the bot:
+Start the bot (uses `.env.production`):
 
 ```bash
 docker-compose up -d
@@ -66,7 +114,7 @@ docker-compose down
 
 #### Development Mode
 
-Start development environment with hot reload:
+Start development environment with hot reload (uses `.env.development`):
 
 ```bash
 docker-compose -f docker-compose.dev.yml up -d
@@ -195,6 +243,58 @@ services:
   database-backup: # Automated SQLite backup service
   database-viewer: # Optional web UI for database (debug profile)
 ```
+
+## Cloud Deployment Examples
+
+### AWS ECS with Secrets Manager
+
+```json
+{
+    "containerDefinitions": [
+        {
+            "secrets": [
+                {
+                    "name": "DISCORD_TOKEN",
+                    "valueFrom": "arn:aws:secretsmanager:region:account:secret:discord-token"
+                }
+            ],
+            "environment": [
+                { "name": "DATABASE_PATH", "value": "/app/data/reminders.sqlite" },
+                { "name": "NODE_ENV", "value": "production" }
+            ]
+        }
+    ]
+}
+```
+
+### Kubernetes with Secrets
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+    name: discord-secrets
+data:
+    DISCORD_TOKEN: <base64-encoded-token>
+---
+apiVersion: apps/v1
+kind: Deployment
+spec:
+    template:
+        spec:
+            containers:
+                - name: bot
+                  envFrom:
+                      - secretRef:
+                            name: discord-secrets
+                  env:
+                      - name: DATABASE_PATH
+                        value: "/app/data/reminders.sqlite"
+```
+
+### Railway/Heroku
+
+Simply set environment variables in the dashboard or CLI - no files needed!
 
 ## Environment Variables
 

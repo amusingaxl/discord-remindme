@@ -10,14 +10,13 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies and rebuild sqlite3 bindings
-# First install without scripts to avoid husky, then rebuild only sqlite3
+# Install dependencies and rebuild better-sqlite3 for Alpine
+# First install without scripts to avoid husky, then rebuild better-sqlite3
 RUN npm ci --only=production --ignore-scripts && \
-    npm rebuild sqlite3
+    npm rebuild better-sqlite3
 
 # Copy application files
 COPY src/ ./src/
-COPY .env.example ./.env.example
 
 # Create non-root user for security (using standard node user from base image)
 # The node user already exists with UID 1000 in node:lts-alpine

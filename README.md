@@ -100,6 +100,16 @@ Start the bot (uses `.env.production`):
 docker-compose up -d
 ```
 
+Start with secure database viewer:
+
+```bash
+# First generate credentials if not already done
+./scripts/generate-htpasswd.sh
+
+# Start bot with database viewer
+docker-compose --profile debug up -d
+```
+
 View logs:
 
 ```bash
@@ -110,6 +120,8 @@ Stop the bot:
 
 ```bash
 docker-compose down
+# Or if running with debug profile:
+docker-compose --profile debug down
 ```
 
 #### Development Mode
@@ -146,6 +158,38 @@ Backup database:
 
 ```bash
 docker cp discord-reminder-bot:/app/data/reminders.sqlite ./backups/reminders_$(date +%Y%m%d_%H%M%S).sqlite
+```
+
+### Secure Database Viewer
+
+The production database viewer is password-protected for security:
+
+1. Generate authentication credentials:
+
+```bash
+./scripts/generate-htpasswd.sh
+# Enter username and password when prompted
+```
+
+2. Start the secure database viewer:
+
+```bash
+docker-compose --profile debug up -d
+```
+
+3. Access at http://localhost:8080 with your credentials
+
+**Security Features:**
+
+- Basic HTTP authentication via nginx reverse proxy
+- Read-only database access
+- Security headers (X-Frame-Options, X-Content-Type-Options, X-XSS-Protection)
+- No direct Adminer exposure
+
+To stop the database viewer:
+
+```bash
+docker-compose --profile debug down
 ```
 
 ## Local Development (without Docker)

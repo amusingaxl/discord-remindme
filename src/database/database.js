@@ -33,8 +33,7 @@ export class Database {
         // Create users table
         this.db.exec(`
             CREATE TABLE IF NOT EXISTS users (
-                id TEXT PRIMARY KEY,
-                discord_id TEXT UNIQUE NOT NULL,
+                discord_id TEXT PRIMARY KEY,
                 timezone TEXT DEFAULT 'UTC',
                 language TEXT DEFAULT NULL
             )
@@ -61,7 +60,6 @@ export class Database {
         this.db.exec(`
             CREATE INDEX IF NOT EXISTS idx_reminders_scheduled ON reminders(scheduled_time);
             CREATE INDEX IF NOT EXISTS idx_reminders_user_id ON reminders(user_id);
-            CREATE INDEX IF NOT EXISTS idx_users_discord_id ON users(discord_id);
         `);
 
         // Add language column to existing users table if it doesn't exist

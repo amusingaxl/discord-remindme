@@ -35,11 +35,11 @@ services:
     image: coleifer/sqlite-web:latest
     restart: unless-stopped
     ports:
-      - "8081:8080"
+      - "8080:8080"
     volumes:
       - ./data:/data
     environment:
-      - SQLITE_DATABASE=/data/reminders.sqlite
+      - SQLITE_DATABASE=/data/reminders_dev.sqlite
     networks:
       - remindme-network-dev
 

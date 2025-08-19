@@ -272,34 +272,42 @@ client.on("interactionCreate", async (interaction) => {
             processedInteractions.delete(firstId);
         }
 
-        // Get user preferences and set up context
-        const preferences = getUserPreferences(interaction, userService);
+        try {
+            // Get user preferences and set up context
+            const preferences = getUserPreferences(interaction, userService);
 
-        await withPreferences(preferences, async () => {
-            const timeParser = new TimeParser(preferences.locale);
+            await withPreferences(preferences, async () => {
+                const timeParser = new TimeParser(preferences.locale);
 
-            try {
                 await command.execute(interaction, {
                     userService,
                     reminderService,
                     timeParser,
                 });
-            } catch (error) {
-                console.error("Error executing command:", error);
+            });
+        } catch (error) {
+            console.error("Error executing command:", error);
 
-                // Only try to respond if we haven't already responded
-                if (!interaction.replied && !interaction.deferred) {
-                    try {
-                        await interaction.reply({
-                            content: t("errors.executionError"),
-                            flags: MessageFlags.Ephemeral,
-                        });
-                    } catch (responseError) {
-                        console.error("Failed to send error response:", responseError.message);
-                    }
+            // Only try to respond if we haven't already responded
+            if (!interaction.replied && !interaction.deferred) {
+                try {
+                    await interaction.reply({
+                        content: t("errors.executionError"),
+                        flags: MessageFlags.Ephemeral,
+                    });
+                } catch (responseError) {
+                    console.error("Failed to send error response:", responseError.message);
+                }
+            } else if (interaction.deferred && !interaction.replied) {
+                try {
+                    await interaction.editReply({
+                        content: t("errors.executionError"),
+                    });
+                } catch (responseError) {
+                    console.error("Failed to send error response:", responseError.message);
                 }
             }
-        });
+        }
     } else if (interaction.isContextMenuCommand()) {
         const command = client.commands.get(interaction.commandName);
 

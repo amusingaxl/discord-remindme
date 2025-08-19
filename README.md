@@ -67,15 +67,21 @@ NODE_ENV=development|production
 
 #### Local Development
 
-For local development convenience, create `.env.development` from the template:
+For local development without Docker:
 
 ```bash
+# 1. Install dependencies
+npm install
+
+# 2. Create .env.development from the template
 cp .env.example .env.development
 # Edit .env.development with your credentials
 
-# Run with npm (loads .env.development automatically)
-npm run dev
-npm run deploy
+# 3. Run using the dev script (automatically loads .env.development)
+npm run dev     # Uses scripts/dev.js to load environment and start with hot reload
+
+# 4. Deploy commands to Discord
+npm run deploy  # Uses scripts/deploy.js to load environment
 ```
 
 #### Production Deployment
@@ -199,7 +205,7 @@ docker-compose --profile debug down
 - Node.js LTS (v18 or higher)
 - npm or yarn
 
-### Installation
+### Installation (Without Docker)
 
 1. Install dependencies:
 
@@ -207,19 +213,28 @@ docker-compose --profile debug down
 npm install
 ```
 
-2. Create `.env` file and add your Discord credentials
+2. Create environment file:
+
+```bash
+cp .env.example .env.development
+# Edit .env.development with your Discord credentials
+```
 
 3. Deploy slash commands:
 
 ```bash
-npm run deploy
+npm run deploy  # Uses scripts/deploy.js to load .env.development
 ```
 
 4. Start the bot:
 
 ```bash
-npm start
+npm run dev     # Development mode with hot reload
+# OR
+npm start       # Production mode (requires environment variables set in shell)
 ```
+
+**Note:** The application no longer loads `.env` files directly. The `npm run dev` and `npm run deploy` commands use helper scripts in the `scripts/` directory that handle environment loading for you.
 
 ## Usage
 

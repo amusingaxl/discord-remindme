@@ -351,4 +351,11 @@ Simply set environment variables in the dashboard or CLI - no files needed!
 
 ## License
 
-MIT
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0) - see the [LICENSE](LICENSE) file for details.
+
+This means:
+
+- You can use, modify, and distribute this bot
+- If you run a modified version as a service (including Discord bots), you must provide the source code to users
+- Any modifications must also be licensed under AGPL-3.0
+- Network use is considered distribution

@@ -17,7 +17,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "dependencies": {
     "better-sqlite3": "^12.2.0",
